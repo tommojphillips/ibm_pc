@@ -1,0 +1,230 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="frontend">
+      <UniqueIdentifier>{2b3cff80-6cb5-4bbf-a1d8-c19b68079d36}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="backend\I8086">
+      <UniqueIdentifier>{2a4f8df4-0fa6-48fe-b41b-e4502b15609c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend\chipset">
+      <UniqueIdentifier>{5e9b00bd-8c35-4f23-b7ba-8b8183f30766}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend\io">
+      <UniqueIdentifier>{2f64acc2-64f8-404b-a8bd-30afe20bd31f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend\video">
+      <UniqueIdentifier>{9f3fa484-3019-40e0-baaa-0b2bb5d2c5d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend\fdd">
+      <UniqueIdentifier>{f83a601d-0f48-43bb-b1ca-7e729ec7da36}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend\utility">
+      <UniqueIdentifier>{df28bed1-d2fd-46ce-a33e-b2a17019ed4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="frontend\sdl">
+      <UniqueIdentifier>{c583883d-34c6-4245-89a8-2e54b2bec6ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="frontend\utility">
+      <UniqueIdentifier>{167f8ddf-49d1-475d-ac24-3cb2ca487cc6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\I8086\src\i8086_alu.c">
+      <Filter>backend\I8086</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\I8086\src\i8086.c">
+      <Filter>backend\I8086</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\I8086\src\i8086 _mnem.c">
+      <Filter>backend\I8086</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\I8086\src\sign_extend.c">
+      <Filter>backend\I8086</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\chipset\i8237_dma.c">
+      <Filter>backend\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\chipset\i8253_pit.c">
+      <Filter>backend\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\chipset\i8255_ppi.c">
+      <Filter>backend\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\chipset\i8259_pic.c">
+      <Filter>backend\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\chipset\nmi.c">
+      <Filter>backend\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\io\isa_bus.c">
+      <Filter>backend\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\io\memory_map.c">
+      <Filter>backend\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\video\cga.c">
+      <Filter>backend\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\video\crtc_6845.c">
+      <Filter>backend\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\video\mda.c">
+      <Filter>backend\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\fdd\fdc.c">
+      <Filter>backend\fdd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\ring_buffer.c">
+      <Filter>backend\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\ibm_pc.c">
+      <Filter>backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\main.c" />
+    <ClCompile Include="..\src\frontend\sdl\dbg_gui.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\sdl\sdl3_button.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\sdl\sdl3_common.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\sdl\sdl3_display.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\sdl\sdl3_font.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\sdl\sdl3_input.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\sdl\sdl3_timing.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\sdl\sdl3_window.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\utility\file.c">
+      <Filter>frontend\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\timing.c">
+      <Filter>backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\input.c">
+      <Filter>backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\fdd\upd765.c">
+      <Filter>backend\fdd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\fdd\lba.c">
+      <Filter>backend\fdd</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\I8086\src\i8086_alu.h">
+      <Filter>backend\I8086</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\I8086\src\i8086.h">
+      <Filter>backend\I8086</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\I8086\src\i8086_mnem.h">
+      <Filter>backend\I8086</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\I8086\src\sign_extend.h">
+      <Filter>backend\I8086</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\chipset\i8237_dma.h">
+      <Filter>backend\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\chipset\i8253_pit.h">
+      <Filter>backend\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\chipset\i8255_ppi.h">
+      <Filter>backend\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\chipset\i8259_pic.h">
+      <Filter>backend\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\chipset\nmi.h">
+      <Filter>backend\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\io\isa_bus.h">
+      <Filter>backend\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\io\memory_map.h">
+      <Filter>backend\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\video\cga.h">
+      <Filter>backend\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\video\crtc_6845.h">
+      <Filter>backend\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\video\mda.h">
+      <Filter>backend\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\fdd\fdc.h">
+      <Filter>backend\fdd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\ring_buffer.h">
+      <Filter>backend\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\ibm_pc.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\dbg_gui.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_typedefs.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_button.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_common.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_display.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_font.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_input.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_keys.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_timing.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_window.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\utility\file.h">
+      <Filter>frontend\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\timing.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\bit_utils.h">
+      <Filter>backend\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\input.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\fdd\upd765.h">
+      <Filter>backend\fdd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\fdd\lba.h">
+      <Filter>backend\fdd</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,56 @@
+Multiple Interrupts
+
+see: https://www.righto.com/2023/02/8086-interrupt.html
+
+DIV [DBZ] [INTR] [TF = 1, IF = 1]
+
+int(DBZ)  [TF = 0, IF = 0]  ; divide error recognized
+int(TRAP) [TF = 0, IF = 0] ; trap recognized
+
+proc(TRAP)
+iret(TRAP) [TF = 0, IF = 0]
+
+proc(DBZ)
+iret(DBZ) [TF = 1, IF = 1]
+
+nxt() 
+
+int(INTR) [TF = 0, IF = 0] ; INTR recognized
+int(TRAP) [TF = 0, IF = 0] ; trap recognized
+
+proc(TRAP)
+iret(TRAP) [TF = 0, IF = 0]
+
+proc(INTR)
+iret(INTR) [TF = 1, IF = 1]
+
+nxt()
+
+int:
+ push flags
+ push cs
+ push ip
+ IF = 0
+ TF = 0
+
+iret:
+ pop ip
+ pop cs
+ pop flags
+
+proc:
+ [INTERRUPT PROCEDURE]
+
+nxt:
+ [EXECUTE_NEXT_INSTRUCTION]
+
+-------------------------------------------------------------------------------
+
+DBZ has priority over INTR; one gets set up (if applicable)
+
+# setup DBZ or INTR int (if applicable)
+# setup TRAP int (if TF = 1)
+# do TRAP proc
+# do DBZ or INTR proc (if applicable)
+# execute the next instruction
+# [repeat]

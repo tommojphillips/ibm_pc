@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{90ee775f-3d73-4d5b-9afa-8045a6812c2f}</ProjectGuid>
+    <RootNamespace>ibmpc</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>true</EnableASAN>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>false</EnableASAN>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);Q:\C\I8086\src;..\lib\SDL3-3.2.10\include;..\lib\SDL3_ttf-3.2.2\include</IncludePath>
+    <OutDir>..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3-3.2.10\lib\x86;;..\lib\SDL3_ttf-3.2.2\lib\x86</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);Q:\C\I8086\src;..\lib\SDL3-3.2.10\include;..\lib\SDL3_ttf-3.2.2\include</IncludePath>
+    <OutDir>..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3-3.2.10\lib\x86;;..\lib\SDL3_ttf-3.2.2\lib\x86</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);Q:\C\I8086\src;..\lib\SDL3-3.2.10\include;..\lib\SDL3_ttf-3.2.2\include</IncludePath>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3-3.2.10\lib\x64;;..\lib\SDL3_ttf-3.2.2\lib\x64</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);Q:\C\I8086\src;..\lib\SDL3-3.2.10\include;..\lib\SDL3_ttf-3.2.2\include</IncludePath>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3-3.2.10\lib\x64;;..\lib\SDL3_ttf-3.2.2\lib\x64</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);SDL3.lib;SDL3_ttf.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);SDL3.lib;SDL3_ttf.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);SDL3.lib;SDL3_ttf.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);SDL3.lib;SDL3_ttf.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\I8086\src\i8086 _mnem.c" />
+    <ClCompile Include="..\..\I8086\src\i8086.c" />
+    <ClCompile Include="..\..\I8086\src\i8086_alu.c" />
+    <ClCompile Include="..\..\I8086\src\sign_extend.c" />
+    <ClCompile Include="..\src\backend\chipset\i8237_dma.c" />
+    <ClCompile Include="..\src\backend\chipset\i8253_pit.c" />
+    <ClCompile Include="..\src\backend\chipset\i8255_ppi.c" />
+    <ClCompile Include="..\src\backend\chipset\i8259_pic.c" />
+    <ClCompile Include="..\src\backend\chipset\nmi.c" />
+    <ClCompile Include="..\src\backend\fdd\fdc.c" />
+    <ClCompile Include="..\src\backend\fdd\lba.c" />
+    <ClCompile Include="..\src\backend\fdd\upd765.c" />
+    <ClCompile Include="..\src\backend\ibm_pc.c" />
+    <ClCompile Include="..\src\backend\input.c" />
+    <ClCompile Include="..\src\backend\io\isa_bus.c" />
+    <ClCompile Include="..\src\backend\io\memory_map.c" />
+    <ClCompile Include="..\src\backend\ring_buffer.c" />
+    <ClCompile Include="..\src\backend\timing.c" />
+    <ClCompile Include="..\src\backend\video\cga.c" />
+    <ClCompile Include="..\src\backend\video\crtc_6845.c" />
+    <ClCompile Include="..\src\backend\video\mda.c" />
+    <ClCompile Include="..\src\frontend\sdl\dbg_gui.c" />
+    <ClCompile Include="..\src\frontend\sdl\sdl3_button.c" />
+    <ClCompile Include="..\src\frontend\sdl\sdl3_common.c" />
+    <ClCompile Include="..\src\frontend\sdl\sdl3_display.c" />
+    <ClCompile Include="..\src\frontend\sdl\sdl3_font.c" />
+    <ClCompile Include="..\src\frontend\sdl\sdl3_input.c" />
+    <ClCompile Include="..\src\frontend\sdl\sdl3_timing.c" />
+    <ClCompile Include="..\src\frontend\sdl\sdl3_window.c" />
+    <ClCompile Include="..\src\frontend\utility\file.c" />
+    <ClCompile Include="..\src\main.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\I8086\src\i8086.h" />
+    <ClInclude Include="..\..\I8086\src\i8086_alu.h" />
+    <ClInclude Include="..\..\I8086\src\i8086_mnem.h" />
+    <ClInclude Include="..\..\I8086\src\sign_extend.h" />
+    <ClInclude Include="..\src\backend\bit_utils.h" />
+    <ClInclude Include="..\src\backend\chipset\i8237_dma.h" />
+    <ClInclude Include="..\src\backend\chipset\i8253_pit.h" />
+    <ClInclude Include="..\src\backend\chipset\i8255_ppi.h" />
+    <ClInclude Include="..\src\backend\chipset\i8259_pic.h" />
+    <ClInclude Include="..\src\backend\chipset\nmi.h" />
+    <ClInclude Include="..\src\backend\fdd\fdc.h" />
+    <ClInclude Include="..\src\backend\fdd\lba.h" />
+    <ClInclude Include="..\src\backend\fdd\upd765.h" />
+    <ClInclude Include="..\src\backend\ibm_pc.h" />
+    <ClInclude Include="..\src\backend\input.h" />
+    <ClInclude Include="..\src\backend\io\isa_bus.h" />
+    <ClInclude Include="..\src\backend\io\memory_map.h" />
+    <ClInclude Include="..\src\backend\ring_buffer.h" />
+    <ClInclude Include="..\src\backend\timing.h" />
+    <ClInclude Include="..\src\backend\video\cga.h" />
+    <ClInclude Include="..\src\backend\video\crtc_6845.h" />
+    <ClInclude Include="..\src\backend\video\mda.h" />
+    <ClInclude Include="..\src\frontend\sdl\dbg_gui.h" />
+    <ClInclude Include="..\src\frontend\sdl\sdl3_typedefs.h" />
+    <ClInclude Include="..\src\frontend\sdl\sdl3_button.h" />
+    <ClInclude Include="..\src\frontend\sdl\sdl3_common.h" />
+    <ClInclude Include="..\src\frontend\sdl\sdl3_display.h" />
+    <ClInclude Include="..\src\frontend\sdl\sdl3_font.h" />
+    <ClInclude Include="..\src\frontend\sdl\sdl3_input.h" />
+    <ClInclude Include="..\src\frontend\sdl\sdl3_keys.h" />
+    <ClInclude Include="..\src\frontend\sdl\sdl3_timing.h" />
+    <ClInclude Include="..\src\frontend\sdl\sdl3_window.h" />
+    <ClInclude Include="..\src\frontend\utility\file.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
