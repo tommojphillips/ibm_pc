@@ -27,7 +27,7 @@ The project is built in Visual Studio 2022
  1. Clone the repo and submodules
   
   ```
-  git clone --recurse-submodules https://github.com/tommojphillips/ibm_pc_.git
+  git clone --recurse-submodules https://github.com/tommojphillips/ibm_pc.git
   ```
 
  2. Open `ibm_pc\vc\ibm_pc.sln`, build, run.
