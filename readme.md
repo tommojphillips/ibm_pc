@@ -2,7 +2,7 @@
 
 An IBM 5150 Emulator written in C using SDL3
 
-## Emulated Hardware:
+## Emulated Hardware
  - i8086/i8088 CPU
  - i8237 DMA
  - i8253 PIT
@@ -14,10 +14,28 @@ An IBM 5150 Emulator written in C using SDL3
  - FDC ISA Card (Floppy Disk Controller)
  - PC Speaker
 
-## Sources:
+## Building
+
+The project is built in Visual Studio 2022
+
+| Dependencies   |                                         |
+| -------------- | --------------------------------------- |
+| I8086          | https://github.com/tommojphillips/i8086 |
+
+ ---
+
+ 1. Clone the repo and submodules
+  
+  ```
+  git clone --recurse-submodules https://github.com/tommojphillips/ibm_pc_.git
+  ```
+
+ 2. Open `ibm_pc\vc\ibm_pc.sln`, build, run.
+
+## Sources
  
 Notes:
- - IBM released the BIOS source code; listing it in `The IBM Technical Reference AUG81`, including comments and addresses.
+ - IBM released the BIOS source code; listing it in `The IBM Technical Reference`, including comments and addresses.
  - The 8086 Users Manual Oct79 has CPU cycle listings per opcode, including transfers.
 
  ---
@@ -27,7 +45,8 @@ Notes:
  | `IBM Techinical Manual AUG81` | https://www.minuszerodegrees.net/manuals/IBM/IBM_5150_Technical_Reference_6025005_AUG81.pdf                                        |
  | `IBM Techinical Manual APR84` | https://www.minuszerodegrees.net/manuals/IBM/IBM_5150_Technical_Reference_6322507_APR84.pdf                                        |
  | `IBM Options & Adapters`      | https://www.minuszerodegrees.net/oa/oa.htm                                                                                         |
- | `port definitions (OS2 Site)` | https://www.os2site.com/sw/info/memory/ports.txt                                                                                   |
+ | `Port Definitions (OS2 Site)` | https://www.os2site.com/sw/info/memory/ports.txt                                                                                   |
+ | `Minus Zero Degrees`          | https://www.minuszerodegrees.net                                                                                                   |
 
  ---
 
@@ -43,7 +62,8 @@ Notes:
  | `The 8086 Book`                 | https://vtda.org/books/Computing/Programming/The8086Book_RussellRectorGeorgeAlexy.pdf                                            |
  | `Programming The 8086/8088`     | https://ia803207.us.archive.org/15/items/Programming_the_8086_8088/Programming_the_8086_8088.pdf                                 |
  | `Ken's Blogs`                   | https://www.righto.com/2023/02/                                                                                                  |
- | `Undocumented Instructions`     | https://www.righto.com/2023/07/undocumented-8086-instructions.html                                                               |
+ | `Undocumented Instructions (Ken's Blog)` | https://www.righto.com/2023/07/undocumented-8086-instructions.html                                                      |
+ | `Undocumented Instructions (os2 museum)` | https://www.os2museum.com/wp/undocumented-8086-opcodes-part-i/                                                          |
 
  ---
  
