@@ -34,18 +34,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\I8086\src\i8086_alu.c">
-      <Filter>backend\I8086</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\I8086\src\i8086.c">
-      <Filter>backend\I8086</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\I8086\src\i8086 _mnem.c">
-      <Filter>backend\I8086</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\I8086\src\sign_extend.c">
-      <Filter>backend\I8086</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\backend\chipset\i8237_dma.c">
       <Filter>backend\chipset</Filter>
     </ClCompile>
@@ -125,20 +113,20 @@
     <ClCompile Include="..\src\backend\fdd\lba.c">
       <Filter>backend\fdd</Filter>
     </ClCompile>
+    <ClCompile Include="..\lib\i8086\src\i8086 _mnem.c">
+      <Filter>backend\I8086</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\i8086\src\i8086.c">
+      <Filter>backend\I8086</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\i8086\src\i8086_alu.c">
+      <Filter>backend\I8086</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lib\i8086\src\sign_extend.c">
+      <Filter>backend\I8086</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\I8086\src\i8086_alu.h">
-      <Filter>backend\I8086</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\I8086\src\i8086.h">
-      <Filter>backend\I8086</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\I8086\src\i8086_mnem.h">
-      <Filter>backend\I8086</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\I8086\src\sign_extend.h">
-      <Filter>backend\I8086</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\backend\chipset\i8237_dma.h">
       <Filter>backend\chipset</Filter>
     </ClInclude>
@@ -225,6 +213,18 @@
     </ClInclude>
     <ClInclude Include="..\src\backend\fdd\lba.h">
       <Filter>backend\fdd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\i8086\src\i8086.h">
+      <Filter>backend\I8086</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\i8086\src\i8086_alu.h">
+      <Filter>backend\I8086</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\i8086\src\i8086_mnem.h">
+      <Filter>backend\I8086</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\i8086\src\sign_extend.h">
+      <Filter>backend\I8086</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

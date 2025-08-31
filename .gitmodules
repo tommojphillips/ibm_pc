@@ -1,0 +1,3 @@
+[submodule "lib/i8086"]
+	path = lib/i8086
+	url = https://github.com/tommojphillips/i8086
