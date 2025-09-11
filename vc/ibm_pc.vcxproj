@@ -172,6 +172,7 @@
     <ClCompile Include="..\lib\i8086\src\i8086 _mnem.c" />
     <ClCompile Include="..\lib\i8086\src\i8086.c" />
     <ClCompile Include="..\lib\i8086\src\i8086_alu.c" />
+    <ClCompile Include="..\lib\i8086\src\i8086_muldiv.c" />
     <ClCompile Include="..\lib\i8086\src\sign_extend.c" />
     <ClCompile Include="..\src\backend\chipset\i8237_dma.c" />
     <ClCompile Include="..\src\backend\chipset\i8253_pit.c" />
@@ -205,6 +206,7 @@
     <ClInclude Include="..\lib\i8086\src\i8086.h" />
     <ClInclude Include="..\lib\i8086\src\i8086_alu.h" />
     <ClInclude Include="..\lib\i8086\src\i8086_mnem.h" />
+    <ClInclude Include="..\lib\i8086\src\i8086_muldiv.h" />
     <ClInclude Include="..\lib\i8086\src\sign_extend.h" />
     <ClInclude Include="..\src\backend\bit_utils.h" />
     <ClInclude Include="..\src\backend\chipset\i8237_dma.h" />

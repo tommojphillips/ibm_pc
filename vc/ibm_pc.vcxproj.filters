@@ -125,6 +125,9 @@
     <ClCompile Include="..\lib\i8086\src\sign_extend.c">
       <Filter>backend\I8086</Filter>
     </ClCompile>
+    <ClCompile Include="..\lib\i8086\src\i8086_muldiv.c">
+      <Filter>backend\I8086</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\backend\chipset\i8237_dma.h">
@@ -224,6 +227,9 @@
       <Filter>backend\I8086</Filter>
     </ClInclude>
     <ClInclude Include="..\lib\i8086\src\sign_extend.h">
+      <Filter>backend\I8086</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\i8086\src\i8086_muldiv.h">
       <Filter>backend\I8086</Filter>
     </ClInclude>
   </ItemGroup>
