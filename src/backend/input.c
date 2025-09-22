@@ -28,7 +28,7 @@ void input_set_cb_has_input(INPUT_HAS_CB cb) {
 	has_input_cb = cb;
 }
 
-void input_reset_input() {
+void input_reset_input(void) {
 	reset_input_cb();
 }
 
@@ -36,10 +36,10 @@ void input_set_input(uint8_t key) {
 	set_input_cb(key);
 }
 
-uint8_t input_get_input() {
+uint8_t input_get_input(void) {
 	return get_input_cb();
 }
 
-int input_has_input() {
+int input_has_input(void) {
 	return has_input_cb();
 }

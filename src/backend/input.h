@@ -8,10 +8,10 @@
 
 #include <stdint.h>
 
-typedef void(*INPUT_RESET_CB)();
+typedef void(*INPUT_RESET_CB)(void);
 typedef void(*INPUT_SET_CB)(uint8_t s);
-typedef uint8_t(*INPUT_GET_CB)();
-typedef int(*INPUT_HAS_CB)();
+typedef uint8_t(*INPUT_GET_CB)(void);
+typedef int(*INPUT_HAS_CB)(void);
 
 /* Set callback */
 void input_set_cb_reset_input(INPUT_RESET_CB cb);
@@ -25,9 +25,9 @@ void input_set_cb_get_input(INPUT_GET_CB cb);
 /* Set callback */
 void input_set_cb_has_input(INPUT_HAS_CB cb);
 
-void input_reset_input();
-int input_has_input();
+void input_reset_input(void);
+int input_has_input(void);
 void input_set_input(uint8_t key);
-uint8_t input_get_input();
+uint8_t input_get_input(void);
 
 #endif
