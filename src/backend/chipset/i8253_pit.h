@@ -51,15 +51,15 @@ typedef void(*on_timer_cb)(void* timer);
 typedef uint8_t* gate_cb;
 
 typedef struct I8253_TIMER {
+	uint16_t count_register;
+	uint16_t counter_latch;
+	uint16_t counter;
+	uint16_t reload;
+
 	uint8_t ctrl;
 	uint8_t active;
 	uint8_t out;
 	uint8_t load_state;
-	uint16_t latch;
-
-	uint16_t count_register;
-	uint32_t counter;
-	uint32_t reload;
 
 	uint8_t load_type;
 	uint8_t channel_state;
@@ -69,8 +69,6 @@ typedef struct I8253_TIMER {
 	on_timer_cb on_timer; /* on timer cb */
 	gate_cb gate_ptr;     /* gate ptr */
 
-	uint16_t phase_counter;
-	uint8_t mode3_high_phase;
 } I8253_TIMER;
 
 typedef struct I8253_PIT {

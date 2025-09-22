@@ -43,10 +43,6 @@ static void i8253_timer_load_counter(I8253_TIMER* timer) {
 	/* count_register could be 0 resulting in 0x10000 iterations */
 	timer->reload = timer->count_register;
 
-	if (timer->reload == 0) {
-		timer->reload = 0x10000;
-	}
-
 	if (timer->load_type == LOAD_TYPE_INIT) {
 		timer->channel_state = I8253_TIMER_STATE_WAITING_LOAD_CYCLE;
 		timer->load_type = LOAD_TYPE_SEQU;
@@ -63,32 +59,15 @@ static void i8253_timer_load_counter(I8253_TIMER* timer) {
 static void i8253_timer_count(I8253_TIMER* timer) {
 	
 	if (timer->ctrl & I8253_PIT_CTRL_BCD) {
-		/* bcd mode */
-		if (timer->counter == 0) {
-			timer->counter = 0x9999;
-		}
-		else {
-			if (timer->counter & 0x000F) {
-				timer->counter -= 1;
-			}
-			else if (timer->counter & 0x00F0) {
-				timer->counter -= 0x7;
-			}
-			else if (timer->counter & 0x0F00) {
-				timer->counter -= 0x67;
-			}
-			else {
-				timer->counter -= 0x667;
-			}
-		}
+		/* bcd mode - not implemented */
 	}
 	else {
-		/* binary mode; counter will overflow. */
+		/* binary mode; counter will overflow; this is intentional so 0 results in 0x10000 iterations */
 		timer->counter--;
 	}
 	
 	if (!timer->count_is_latched) {
-		timer->latch = timer->counter;
+		timer->counter_latch = timer->counter;
 	}
 }
 
@@ -151,23 +130,23 @@ static void i8253_timer_set_gate(I8253_TIMER* timer) {
 	}
 
 	if (timer->channel_state != I8253_TIMER_STATE_WAITING_FOR_RELOAD) {
-		if (IS_RISING_EDGE(0xFF, timer->gate, gate)) {
+		if (!timer->gate && gate) { // is raising edge of gate
 			switch (timer->ctrl & I8253_PIT_CTRL_MODE) {
 				case I8253_PIT_MODE0:
 				case I8253_PIT_MODE4:
 					break; // no effect
 
-				case I8253_PIT_MODE1:
 				case I8253_PIT_MODE2:
-				case I8253_PIT_MODE3:
-				case I8253_PIT_MODE5:
 				case I8253_PIT_MODE6:
+				case I8253_PIT_MODE3:
 				case I8253_PIT_MODE7:
+				case I8253_PIT_MODE1:
+				case I8253_PIT_MODE5:
 					timer->channel_state = I8253_TIMER_STATE_WAITING_LOAD_CYCLE;
 					break;
 			}
 		}
-		else if (IS_FALLING_EDGE(0xFF, timer->gate, gate)) {
+		else if (timer->gate && !gate) { // is falling edge of gate
 			switch (timer->ctrl & I8253_PIT_CTRL_MODE) {
 				case I8253_PIT_MODE0:
 				case I8253_PIT_MODE1:
@@ -175,10 +154,13 @@ static void i8253_timer_set_gate(I8253_TIMER* timer) {
 					break; // no effect
 
 				case I8253_PIT_MODE2:
-				case I8253_PIT_MODE3:
-				case I8253_PIT_MODE4:
 				case I8253_PIT_MODE6:
+				case I8253_PIT_MODE3:
 				case I8253_PIT_MODE7:
+					i8253_timer_set_output(timer, 1);
+					timer->channel_state = I8253_TIMER_STATE_WAITING_FOR_GATE;
+					break;
+				case I8253_PIT_MODE4:
 					timer->channel_state = I8253_TIMER_STATE_WAITING_FOR_GATE;
 					break;
 			}
@@ -226,22 +208,22 @@ static uint8_t i8253_timer_read(I8253_TIMER* timer) {
 
 		case RW_LSB: // LSB
 			timer->count_is_latched = 0;
-			v = timer->latch & 0xFF;
+			v = timer->counter_latch & 0xFF;
 			break;
 
 		case RW_MSB: // MSB
 			timer->count_is_latched = 0;
-			v = (timer->latch >> 8) & 0xFF;
+			v = (timer->counter_latch >> 8) & 0xFF;
 			break;
 
 		case RW_BOTH: // LSB then MSB
 			if (timer->load_state == LOAD_STATE_LSB) {
-				v = timer->latch & 0xFF;
+				v = timer->counter_latch & 0xFF;
 				timer->load_state = LOAD_STATE_MSB;
 			}
 			else {
 				timer->count_is_latched = 0;
-				v = (timer->latch >> 8) & 0xFF;
+				v = (timer->counter_latch >> 8) & 0xFF;
 				timer->load_state = LOAD_STATE_LSB;
 			}
 			break;
@@ -255,7 +237,7 @@ static void i8253_pit_control_write(I8253_PIT* pit, uint8_t value) {
 	
 	if ((value & I8253_PIT_CTRL_RW) == RW_LATCH) {
 		// latching command
-		pit->timer[i].latch = pit->timer[i].counter;
+		pit->timer[i].counter_latch = pit->timer[i].counter;
 		pit->timer[i].count_is_latched = 1;
 	}
 	else {
@@ -331,7 +313,7 @@ void i8253_pit_reset(I8253_PIT* pit) {
         pit->timer[i].ctrl = 0;
 		pit->timer[i].reload = 0;
         pit->timer[i].counter = 0;
-        pit->timer[i].latch = 0;
+        pit->timer[i].counter_latch = 0;
         pit->timer[i].out_on_reload = 0;
 		pit->timer[i].active = 0;
 		pit->timer[i].count_is_latched = 0;
