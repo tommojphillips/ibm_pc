@@ -8,7 +8,7 @@
 #include <SDL3/SDL.h>
 
 #include "sdl3_timing.h"
-#include "../../backend/timing.h"
+#include "backend/timing.h"
 
 TIMER_ID sdl_create_timer_ns(uint64_t interval_ns, TIMER_CALLBACK_NS callback, void* param) {
 	TIMER_ID id =  SDL_AddTimerNS(interval_ns, (SDL_NSTimerCallback)callback, param);
@@ -30,11 +30,20 @@ void sdl_destroy_timer(TIMER_ID id) {
 	}
 }
 
-uint64_t sdl_timing_get_ticks_ms() {
+uint64_t sdl_timing_get_ticks_ms(void) {
 	return SDL_GetTicks();
 }
-uint64_t sdl_timing_get_ticks_ns() {
+uint64_t sdl_timing_get_ticks_ns(void) {
 	return SDL_GetTicksNS();
+}
+
+int sdl_timing_init_frame(FRAME_STATE* time, double target_ms) {
+	/* Use Performance Counter */
+	time->ms = 0;
+	time->last_ms = 0;
+	time->start_frame_time = 0;
+	time->target_ms = target_ms;
+	return 0;
 }
 
 int sdl_timing_reset_frame(FRAME_STATE* time) {

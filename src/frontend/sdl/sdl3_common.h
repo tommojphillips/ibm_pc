@@ -9,7 +9,7 @@
 
 #include <SDL3/SDL.h>
 
-#include "..\..\backend\ring_buffer.h"
+#include "backend\ring_buffer.h"
 
 #define KEYS_SIZE 10
 
@@ -26,14 +26,14 @@ extern SDL* sdl;
 
 /* SDL Create; Allocates memory for the SDL structure 
  Returns: 1 if error; 0 if success */
-int sdl_create();
+int sdl_create(void);
 
 /* SDL Destroy */
-void sdl_destroy();
+void sdl_destroy(void);
 
 /* SDL Update; Updates all window instances from the service_list.
  Calls on_process_event() for all windows in the service_list.
  Checks if the desired frame time for every window has elapsed and calls on_render(). */
-void sdl_update();
+void sdl_update(void);
 
 #endif

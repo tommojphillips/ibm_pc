@@ -413,8 +413,8 @@ static void cga_draw_screen(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display
 void display_on_video_adapter_changed(DISPLAY_INSTANCE* display, uint8_t video_adapter) {
 	if (display->window != NULL) {
 		switch (video_adapter) {
-			case VIDEO_ADAPTER_MDA:
-				display->window->time.target_ms = HZ_TO_MS(50.0);
+			case VIDEO_ADAPTER_MDA_80X25:
+				sdl_timing_init_frame(&display->window->time, HZ_TO_MS(50.0));
 				display->window->on_render = mda_draw_screen;
 				display->window->on_render_param = display;
 
@@ -424,8 +424,9 @@ void display_on_video_adapter_changed(DISPLAY_INSTANCE* display, uint8_t video_a
 				}
 				dbg_print("[DISPLAY] Video adapter: MDA\n");
 				break;
-			case VIDEO_ADAPTER_CGA:
-				display->window->time.target_ms = HZ_TO_MS(60.0);
+			case VIDEO_ADAPTER_CGA_40X25:
+			case VIDEO_ADAPTER_CGA_80X25:
+				sdl_timing_init_frame(&display->window->time, HZ_TO_MS(60.0));
 				display->window->on_render = cga_draw_screen;
 				display->window->on_render_param = display;
 
@@ -436,7 +437,7 @@ void display_on_video_adapter_changed(DISPLAY_INSTANCE* display, uint8_t video_a
 				dbg_print("[DISPLAY] Video adapter: CGA\n");
 				break;
 			case VIDEO_ADAPTER_NONE:
-				display->window->time.target_ms = HZ_TO_MS(60.0);
+				sdl_timing_init_frame(&display->window->time, HZ_TO_MS(60.0));
 				display->window->on_render = dummy_draw_screen;
 				display->window->on_render_param = display;
 				dbg_print("[DISPLAY] Video adapter: DUMMY\n");

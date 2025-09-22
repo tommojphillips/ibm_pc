@@ -30,7 +30,7 @@ static void process_event(SDL_Event* e) {
 }
 
 /* SDL struct */
-int sdl_create() {
+int sdl_create(void) {
 	if (sdl != NULL) {
 		dbg_print("Error: Global SDL instance already created\n");
 		return 1;
@@ -62,7 +62,7 @@ int sdl_create() {
 	sdl->quit = 0;
 	return 0;
 }
-void sdl_destroy() {
+void sdl_destroy(void) {
 
 	if (sdl != NULL) {
 
@@ -79,7 +79,7 @@ void sdl_destroy() {
 		sdl = NULL;
 	}
 }
-void sdl_update() {
+void sdl_update(void) {
 	while (SDL_PollEvent(&sdl->e)) {
 		process_event(&sdl->e);
 		window_manager_process_event(&sdl->e);

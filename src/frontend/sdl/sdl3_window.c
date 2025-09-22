@@ -216,7 +216,7 @@ int window_manager_create(int window_count) {
 	window_manager->instance_index = 0;
 	return 0;
 }
-void window_manager_destroy() {
+void window_manager_destroy(void) {
 	if (window_manager != NULL) {
 		if (window_manager->instances != NULL) {
 
@@ -253,7 +253,7 @@ void window_manager_process_event(SDL_Event* e) {
 		}
 	}
 }
-void window_manager_update() {
+void window_manager_update(void) {
 	for (int i = 0; i < window_manager->instance_index; ++i) {
 		window_instance_render(&window_manager->instances[i]);
 	}

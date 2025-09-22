@@ -24,13 +24,22 @@ TIMER_ID sdl_create_timer_ms(uint32_t ms, TIMER_CALLBACK_MS callback, void* user
 void sdl_destroy_timer(TIMER_ID id);
 
 /* Get ticks in milli seconds since startup */
-uint64_t sdl_timing_get_ticks_ms();
+uint64_t sdl_timing_get_ticks_ms(void);
 
 /* Get ticks in nano seconds since startup */
-uint64_t sdl_timing_get_ticks_ns();
+uint64_t sdl_timing_get_ticks_ns(void);
 
+/* Init frame state; set target_ms */
+int sdl_timing_init_frame(FRAME_STATE* time, double target_ms);
+
+/* Reset frame */
 int sdl_timing_reset_frame(FRAME_STATE* time);
+
+/* New frame */
 int sdl_timing_new_frame(FRAME_STATE* time);
+
+/* Check frame; Check if target_ms has elasped
+	Returns: 1 if target_ms has elasped. otherwise 0. */
 int sdl_timing_check_frame(FRAME_STATE* time);
 
 #endif

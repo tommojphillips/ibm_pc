@@ -9,7 +9,7 @@
 
 #include "sdl3_timing.h"
 
-#include "..\..\backend\ring_buffer.h"
+#include "backend\ring_buffer.h"
 
 typedef struct SDL_Window SDL_Window;
 typedef struct SDL_Renderer SDL_Renderer;
@@ -104,13 +104,13 @@ void window_instance_set_cb_on_render(WINDOW_INSTANCE* instance, WINDOW_INSTANCE
 int window_manager_create(int window_count);
 
 /* Destroy Window Manager. */
-void window_manager_destroy();
+void window_manager_destroy(void);
 
 /* Process Event. */
 void window_manager_process_event(SDL_Event* e);
 
 /* Update Window Manager */
-void window_manager_update();
+void window_manager_update(void);
 
 #ifdef __cplusplus
 };
