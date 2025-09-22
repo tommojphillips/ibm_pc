@@ -7,10 +7,16 @@
 
 #include "i8259_pic.h"
 
-#define ICW1_ICW4 0x01
-#define ICW1_SNGL 0x02
+#define ICW1_REQ_ICW4 0x01
+#define ICW1_SNGL     0x02
+#define ICW1_ADI      0x04
+#define ICW1_LTIM     0x08 /* Edge/Level mode; 0 = edge, 1 = level */
+#define ICW1_INIT     0x10
 
-#define OCW1 0x10
+#define ICW4_8088     0x01 /* 8088/8080 mode */
+#define ICW4_AEOI     0x02 /* Auto EOI mode; 1 = AEOI */
+#define ICW4_BUFFERED 0x08 /* Buffered mode */
+#define ICW4_NESTED   0x10 /* Fully nested mode */
 
 #define OCW2_OP_MASK  0xE0
 #define OCW2_IR_LVL   0x07
@@ -20,7 +26,7 @@
 #define OCW2_SET_PRI  0xC0
 
 #define OCW3           0x08
-#define OCW3_READ_MASK 0x03
+#define OCW3_READ_MASK 0x03 /* Read IRR/ISR */
 #define OCW3_READ_IRR  0x02
 #define OCW3_READ_ISR  0x03
 
@@ -32,144 +38,197 @@
 #define dbg_print(x, ...)
 #endif
 
+static void icw1(I8259_PIC* pic, uint8_t value) {
+	/* ICW1 intiitalization */
+	i8259_pic_reset(pic);
+	pic->icw[pic->icw_index++] = value;
+	dbg_print("[PIC] ICW1 = %02X\n", value);
+}
+static void icwx(I8259_PIC* pic, uint8_t value) {
+	/* ICW[2/3/4] intiitalization */
+
+	dbg_print("[PIC] ICW%d = %02X\n", pic->icw_index + 1, value);
+
+	switch (pic->icw_index) {
+
+		case 1: /* ICW2 */
+			pic->icw[pic->icw_index++] = value;
+
+			/* If in single mode; skip ICW3 */
+			if (pic->icw[0] & ICW1_SNGL) {
+				/* skip ICW3 */
+				pic->icw_index++;
+
+				if (!(pic->icw[0] & ICW1_REQ_ICW4)) {
+					/* skip ICW4 */
+					pic->icw_index++;
+				}
+			}
+			break;
+
+		case 2: /* ICW3 */
+			pic->icw[pic->icw_index++] = value;
+
+			if (!(pic->icw[0] & ICW1_REQ_ICW4)) {
+				/* skip ICW4 */
+				pic->icw_index++;
+			}
+			break;
+
+		case 3: /* ICW4 */
+			pic->icw[pic->icw_index++] = value;
+			break;
+	}
+	
+	if (pic->icw_index == I8259_PIC_ICW_COUNT) {
+		pic->initialized = 1;
+		dbg_print("[PIC] initialized\n");
+	}	
+}
+
+static void ocw1(I8259_PIC* pic, uint8_t value) {
+	/* OCW1 */
+	pic->imr = value;
+}
+static void ocw2(I8259_PIC* pic, uint8_t value) {
+	/* OCW2 */
+	switch (value & OCW2_OP_MASK) {
+		case OCW2_EOI: {
+			/* Clear highest priority IR */
+			for (uint8_t i = 0; i < 8; ++i) {
+				if (pic->isr & (1 << i)) {
+					pic->isr &= ~(1 << i);
+					break;
+				}
+			}
+			//dbg_print("[PIC] EOI\n");
+		} break;
+
+		case OCW2_EOI_SPEC: {
+			/* Clear specific IR */
+			pic->isr &= ~(1 << (value & 0x07));
+			//dbg_print("[PIC] EOI_SPEC\n");
+		} break;
+
+		default:
+			dbg_print("[PIC] cmd not implemented: OCW2 = %02X", value);
+			break;
+	}
+}
+static void ocw3(I8259_PIC* pic, uint8_t ocw3) {
+	/* OCW3 */
+	pic->ocw3 = ocw3;
+}
+
+static void command_write(I8259_PIC* pic, uint8_t value) {
+	if (value & ICW1_INIT) {
+		icw1(pic, value);
+	}
+	else if (pic->initialized) {
+		if (!(value & OCW3)) {
+			ocw2(pic, value);
+		}
+		else {
+			ocw3(pic, value);
+		}
+	}
+}
+static void data_write(I8259_PIC* pic, uint8_t value) {
+	if (pic->initialized) {
+		ocw1(pic, value);
+	}
+	else {
+		icwx(pic, value);
+	}
+}
+
+static uint8_t command_read(I8259_PIC* pic) {
+	if ((pic->ocw3 & OCW3_READ_MASK) == OCW3_READ_ISR) {
+		return pic->isr;
+	}
+	else {
+		return pic->irr;
+	}
+}
+static uint8_t data_read(I8259_PIC* pic) {
+	return pic->imr;
+}
+
+uint8_t i8259_pic_read_io_byte(I8259_PIC* pic, uint8_t io_address) {
+	switch (io_address & 0x1) {
+		case 0x0:
+			return command_read(pic);
+
+		default:
+		case 0x1:
+			return data_read(pic);			
+	}
+}
+
+void i8259_pic_write_io_byte(I8259_PIC* pic, uint8_t io_address, uint8_t value) {
+	switch (io_address & 0x1) {
+		case 0x0:
+			command_write(pic, value);
+			break;
+
+		default:
+		case 0x1:
+			data_write(pic, value);
+			break;
+	}
+}
+
 void i8259_pic_clear_interrupt(I8259_PIC* pic, uint8_t irq) {
-	if (!pic->initialized) return;
-	uint8_t irr = (1 << (irq & 0x7));
-	pic->irr &= ~irr;
+	if (pic->initialized) {
+		uint8_t ir = (1 << (irq & 0x7));
+		pic->irr &= ~ir;
+	}
 }
 
 void i8259_pic_request_interrupt(I8259_PIC* pic, uint8_t irq) {
-	if (!pic->initialized) return;
-	pic->irr |= (1 << irq) & ~pic->imr;
-}
-int i8259_pic_get_interrupt(I8259_PIC* pic, uint8_t* type) {
-	if (!pic->initialized) return 0;
-	uint8_t irr = (pic->irr & ~pic->imr) & ~pic->isr;
-	for (uint8_t i = 0; i < 8; ++i) {
-		if ((irr >> i) & 1) {
-			pic->irr &= ~(1 << i);
-			pic->isr |= (1 << i);    // set interrupt in-service
-			*type = pic->icw[1] + i; // service <type> interrupt
-			return 1;
-		}
+	if (pic->initialized) {
+		pic->irr |= (1 << irq) & ~pic->imr;
 	}
-	return 0; // no interrupt to service
 }
 
-static void icw1_init(I8259_PIC* pic, uint8_t icw1) {
-	/* ICW1 intiitalization */
-	i8259_pic_reset(pic);
-	pic->icw[pic->icw_index++] = icw1;
-	dbg_print("[PIC] ICW%d = %02X\n", pic->icw_index, icw1);
-}
-static void ocw2_cmd(I8259_PIC* pic, uint8_t cmd) {
-	/* OCW2 */
-	if (!pic->initialized) return;
-	pic->ocw2 = (cmd & OCW2_OP_MASK);
-	switch (pic->ocw2) {
-		case OCW2_EOI:
-#ifdef DBG_PRINT
-			if (pic->isr & ~0x1) { /* ignore int 8 */
-				dbg_print("[PIC] EOI\n");
+int i8259_pic_get_interrupt(I8259_PIC* pic, uint8_t* type) {
+	if (pic->initialized) {
+		/* get IR if not masked and isnt already in service. */
+		uint8_t ir = (pic->irr & ~pic->imr) & ~pic->isr;
+		/* Service highest priority IR */
+		for (uint8_t i = 0; i < 8; ++i) {
+			if ((ir >> i) & 1) {
+
+				/* In edge triggered mode; clear IRR */
+				if (!(pic->icw[0] & ICW1_LTIM)) {
+					pic->irr &= ~(1 << i);
+				}
+
+				/* Set ISR */
+				pic->isr |= (1 << i);
+
+				/* In Auto EOI mode; clear ISR */
+				if (pic->icw[3] & ICW4_AEOI) {
+					pic->isr &= (1 << i);
+				}
+
+				/* Set INT type; mask ICW2 to the top 5 bits. */
+				*type = (pic->icw[1] & 0xF8) | i;
+				return 1;
 			}
-#endif
-			pic->irr &= ~pic->isr;
-			pic->isr = 0x00;
-			break;
-		case OCW2_EOI_SPEC: // specific EOI
-			pic->irr &= ~(1 << (cmd & 0x03));
-			pic->isr &= ~(1 << (cmd & 0x03));
-			dbg_print("[PIC] EOI_SPEC\n");
-			break;
-		case OCW2_SET_PRI:
-			pic->irl = (cmd & OCW2_IR_LVL);
-			dbg_print("[PIC] IR_LVL\n");
-			break;
-		default:
-			dbg_print("[PIC] cmd not implemented: OCW2 = %02X", pic->ocw2);
-			break;
+		}
 	}
-}
-static void ocw3_req(I8259_PIC* pic, uint8_t ocw3) {
-	/* OCW3 request */
-	if (!pic->initialized) return;
-	pic->ocw3 = ocw3;
+	return 0;
 }
 
 void i8259_pic_reset(I8259_PIC* pic) {
 	pic->imr = 0;
 	pic->irr = 0;
 	pic->isr = 0;
-	pic->ocw2 = 0;
 	pic->ocw3 = 0;
 	pic->initialized = 0;
 	pic->icw_index = 0;
 	for (int i = 0; i < I8259_PIC_ICW_COUNT; ++i) {
 		pic->icw[i] = 0;
-	}
-}
-
-uint8_t i8259_pic_read_io_byte(I8259_PIC* pic, uint8_t io_address) {
-	switch (io_address) {
-
-		case 0x0:
-			if ((pic->ocw3 & OCW3_READ_MASK) == OCW3_READ_ISR) {
-				/* Read in-service register */
-				return pic->isr;
-			}
-			else {
-				/* Read interrupt request register */
-				return pic->irr;
-			}
-			break;
-
-		case 0x1:
-			/* Read interrupt mask register */
-			return pic->imr;
-	}
-	return 0;
-}
-void i8259_pic_write_io_byte(I8259_PIC* pic, uint8_t io_address, uint8_t value) {
-	switch (io_address) {
-
-		case 0x0:
-			if (value & OCW1) {
-				/* ICW1 */
-				icw1_init(pic, value);
-			}
-			else if (!(value & OCW3)) {
-				/* OCW2 */
-				ocw2_cmd(pic, value);
-			}
-			else {
-				/* OCW3 */
-				ocw3_req(pic, value);
-			}
-			break;
-
-		case 0x1:
-			if (pic->icw_index < I8259_PIC_ICW_COUNT) {
-				pic->icw[pic->icw_index++] = value;
-				dbg_print("[PIC] ICW%d = %02X\n", pic->icw_index, value);
-
-				if (pic->icw_index == 2 && (pic->icw[0] & ICW1_SNGL)) {
-					pic->icw_index++;
-					dbg_print("[PIC] ICW%d = %02X\n", pic->icw_index, value);
-				}
-				if (pic->icw_index == 3 && !(pic->icw[0] & ICW1_ICW4)) {
-					pic->icw_index++;
-					dbg_print("[PIC] ICW%d = %02X\n", pic->icw_index, value);
-				}
-
-				if (pic->icw_index >= I8259_PIC_ICW_COUNT) {
-					pic->initialized = 1;
-					dbg_print("[PIC] initialized\n");
-				}
-			}
-			else {
-				/* OCW1 Write (Write Interrupt Mask) */
-				pic->imr = value;
-			}
-			break;
 	}
 }

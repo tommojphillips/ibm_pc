@@ -14,9 +14,7 @@ typedef struct I8259_PIC {
 	uint8_t imr; // interrupt mask register
 	uint8_t irr; // interrupt request register
 	uint8_t isr; // in-service register
-	uint8_t irl; // interrupt request level
-	uint8_t ocw2;
-	uint8_t ocw3;
+	uint8_t ocw3; // Read ISR/IRR
 	uint8_t initialized;
 	uint8_t icw_index;
 	uint8_t icw[I8259_PIC_ICW_COUNT];
