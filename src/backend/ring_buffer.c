@@ -50,6 +50,7 @@ void ring_buffer_push(RING_BUFFER* rb, uint8_t item) {
 		rb->count++;
 	}
 	else {
+		/* We have overrun the head; inc the head so pop reads the oldest values first. */
 		rb->head = (rb->head + 1) % rb->buffer_size;
 	}
 }
@@ -61,4 +62,13 @@ uint8_t ring_buffer_pop(RING_BUFFER* rb) {
 	rb->head = (rb->head + 1) % rb->buffer_size;
 	rb->count--;
 	return item;
+}
+int ring_buffer_peek(RING_BUFFER* rb, int head_offset, uint8_t* out) {
+	if (head_offset < rb->count) {
+		if (out != NULL) {
+			*out = rb->buffer[(rb->head + head_offset) % rb->buffer_size];
+		}
+		return 0;
+	}
+	return 1;
 }
