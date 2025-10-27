@@ -54,7 +54,7 @@
 int memory_map_create(MEMORY_MAP* map, uint32_t buffer_size, int region_count) {
 	if (map != NULL) {
 		/* alloc mregions */
-		map->regions = (MEMORY_REGION*)calloc(region_count, sizeof(MEMORY_REGION));
+		map->regions = calloc(region_count, sizeof(MEMORY_REGION));
 		if (map->regions == NULL) {
 			dbg_print("Failed to create memory map; Calloc failed. region_count = %x, region_size = %zu\n", region_count, sizeof(MEMORY_REGION));
 			return 1;
@@ -63,7 +63,7 @@ int memory_map_create(MEMORY_MAP* map, uint32_t buffer_size, int region_count) {
 		map->region_index = 0;
 
 		/* alloc memory buffer */
-		map->mem = (uint8_t*)calloc(1, buffer_size);
+		map->mem = calloc(1, buffer_size);
 		if (map->mem == NULL) {
 			dbg_print("Failed to create memory map; Calloc failed. buffer_size = %x\n", buffer_size);
 			return 1;
@@ -110,8 +110,10 @@ void memory_map_write_byte(MEMORY_MAP* map, uint32_t address, uint8_t value) {
 
 	/* Handle mregion */
 	for (int i = 0; i < map->region_index; ++i) {
-		if (IS_ACTIVE(i) && IS_WRITABLE(i) && IS_IN_RANGE(address, MR_START, MR_END)) {
-			*(uint8_t*)(map->mem + MR_START + ((address - MR_START) & map->regions[i].mask)) = value;
+		if (IS_ACTIVE(i) && IS_IN_RANGE(address, MR_START, MR_END)) {
+			if (IS_WRITABLE(i)) {
+				*(uint8_t*)(map->mem + MR_START + ((address - MR_START) & map->regions[i].mask)) = value;
+			}
 			return;
 		}
 	}
@@ -222,4 +224,19 @@ int memory_map_disable_mregion(MEMORY_MAP* map, int index) {
 	}
 	dbg_print("Failed to disable mregion; Index out of range or mregion removed. index = %d, removed = %x\n", index, IS_REMOVED(index));
 	return 1;
+}
+
+MEMORY_REGION* memory_map_get_mregion(MEMORY_MAP* map, int i) {
+
+	if (!IS_IN_RANGE(i, 0, map->region_index)) {
+		dbg_print("Failed to get mregion; Index out of range. index = %x\n", i);
+		return NULL;
+	}
+
+	if (IS_REMOVED(i)) {
+		dbg_print("Failed to get mregion; mregion has been removed. index = %x\n", i);
+		return NULL;
+	}
+
+	return &map->regions[i];
 }

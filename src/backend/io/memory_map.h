@@ -100,4 +100,10 @@ int memory_map_enable_mregion(MEMORY_MAP* map, int index);
 	Returns: 1 if error or 0 on success */
 int memory_map_disable_mregion(MEMORY_MAP* map, int index);
 
+/* Get a mregion in the memory map
+	map:     the map instance
+	index:   the region index
+	Returns: NULL if error or the mregion on success */
+MEMORY_REGION* memory_map_get_mregion(MEMORY_MAP* map, int i);
+
 #endif /* MEMORY_MAP_H */
