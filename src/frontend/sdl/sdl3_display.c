@@ -10,18 +10,11 @@
 #include "sdl3_display.h"
 #include "sdl3_window.h"
 #include "sdl3_font.h"
+#include "sdl3_typedefs.h"
 
-#include "../../backend/video/mda.h"
-#include "../../backend/video/cga.h"
-#include "../../backend/ibm_pc.h"
-
-#define sx(x)    ((x) ? 0xBF : 0)
-#define se(x)    sx(x)
-
-#define max(x, y) (x > y ? x : y)
-#define min(x, y) (y > x ? x : y)
-
-#define CENTER(t, x, y) (((t - (x)) / 2) + (y))
+#include "backend/video/mda.h"
+#include "backend/video/cga.h"
+#include "backend/ibm_pc.h"
 
 #define DBG_PRINT
 #ifdef DBG_PRINT
@@ -31,40 +24,90 @@
 #define dbg_print(x, ...)
 #endif
 
-static void display_update_cell_position(DISPLAY_INSTANCE* display, SDL_FRect* rect, int max_rows, int max_columns, int row, int column) {
-	rect->x = (float)CENTER(display->window->transform.w, max_columns * display->cell_w, column * display->cell_w);
-	rect->y = (float)CENTER(display->window->transform.h, max_rows * display->cell_h, row * display->cell_h);
-	rect->w = (float)display->cell_w;
-	rect->h = (float)display->cell_h;
+static void get_cell_position(DISPLAY_INSTANCE* display, float offset_x, float offset_y, float x, float y, SDL_FRect* rect) {
+	rect->x = offset_x + (x * display->cell_w);
+	rect->y = offset_y + (y * display->cell_h);
+	rect->w = display->cell_w;
+	rect->h = display->cell_h;
+}
+static void get_cell_dimensions(DISPLAY_INSTANCE* display, int w, int h, float* offset_x, float* offset_y) {
+	// Compute available drawable area
+	float window_w = (float)display->window->transform.w;
+	float window_h = (float)display->window->transform.h - display->offset_y;
+
+	float aspect_correction_y = 1.0f;
+	if (display->correct_aspect_ratio) {
+		/* 1.2 = K * (4/3) * (320/200)
+		 * 1.2 = K * 1.3333 * 1.6
+		 * 1.2 = K * 2.1333
+		 * K = 1.2 / 2.1333 = 0.5625 */
+		const float aspect_correction_factor = 0.5625f;
+		const float physical_aspect = 4.0f / 3.0f;
+		aspect_correction_y = aspect_correction_factor * physical_aspect * ((float)w / (float)h);
+	}
+
+	// Compute the *effective* display height
+	float effective_height = h * aspect_correction_y;
+
+	// Determine scale to fit both width and height
+	float scale_x = window_w / w;
+	float scale_y = window_h / effective_height;
+	float scale = (scale_x < scale_y) ? scale_x : scale_y;
+
+	// Set cell size
+	display->cell_w = scale;
+	display->cell_h = scale * aspect_correction_y;
+
+	// Compute offsets to center image
+	float drawn_w = w * display->cell_w;
+	float drawn_h = h * display->cell_h;
+
+	*offset_x = (window_w - drawn_w) / 2.0f;
+	*offset_y = display->offset_y + (window_h - drawn_h) / 2.0f;
 }
 
-static void display_update_cursor_position(CRTC_6845* crtc, uint8_t bytes_per_row, int* row, int* column) {
-	/* calculate cursor position */	
-	const uint16_t cursor_address_register = (crtc->registers[CRTC_6845_CURSOR_HI]) << 8 | crtc->registers[CRTC_6845_CURSOR_LO];	
-	uint32_t offset = cursor_address_register;
-	*row = offset / bytes_per_row;
-	*column = offset % bytes_per_row;
+static void get_cursor_position(const CRTC_6845* crtc, uint8_t* row, uint8_t* column) {
+	/* calculate cursor position */
+	if (crtc->hdisp > 0) {
+		*row = (crtc->cursor_address / crtc->hdisp) & 0xFF;
+		*column = (crtc->cursor_address % crtc->hdisp) & 0xFF;
+	}
+}
+
+static void fill_screen(WINDOW_INSTANCE* window, const COLOR_RGB color) {
+	const SDL_FRect rect = {
+		.x = 0,
+		.y = 0,
+		.w = (float)window->transform.w,
+		.h = (float)window->transform.h,
+	};
+	SDL_SetRenderDrawColor(window->renderer, color.r, color.g, color.b, 0xFF);
+	SDL_RenderFillRect(window->renderer, &rect);
+}
+
+static void draw_overscan(WINDOW_INSTANCE* window, const COLOR_RGB color, float offset_x, float offset_y) {
+	const SDL_FRect rect = {
+		.x = offset_x,
+		.y = offset_y,
+		.w = (float)window->transform.w - (offset_x * 2),
+		.h = (float)window->transform.h - (offset_y * 2),
+	};
+	SDL_SetRenderDrawColor(window->renderer, color.r, color.g, color.b, 0xFF);
+	SDL_RenderFillRect(window->renderer, &rect);
 }
 
 /* Dummy display */
-static void disabled_draw_screen(DISPLAY_INSTANCE* display, int w, int h, const char* msg) {
-	/* Card is not enabled */
-	SDL_FRect rect = { .x = (float)CENTER(display->window->transform.w, w, 0), .y = (float)CENTER(display->window->transform.h, h, 0), .w = (float)w, .h = (float)h };
-	SDL_SetRenderDrawColor(display->window->renderer, 0, 0, 0, 0xFF);
-	SDL_RenderFillRect(display->window->renderer, &rect);
-	SDL_SetRenderDrawColor(display->window->renderer, 0xFF, 0, 0, 0xFF);
-	SDL_RenderDebugText(display->window->renderer, (float)CENTER(display->window->transform.w, w, w / 2) - (80), (float)CENTER(display->window->transform.h,h, h / 2), msg);
+static void disabled_draw_screen(WINDOW_INSTANCE* window) {
+	COLOR_RGB col = { 0, 0, 0 };
+	fill_screen(window, col);
 }
 void dummy_draw_screen(WINDOW_INSTANCE* window, DISPLAY_INSTANCE* display) {
-	disabled_draw_screen(display, window->transform.w, window->transform.h, "DUMMY");
+	(void)display;
+	disabled_draw_screen(window);
 }
 
 /* MDA */
-#define MDA_BYTES_PER_ROW 80
-static void mda_draw_background(DISPLAY_INSTANCE* display, SDL_FRect* rect, uint8_t attribute) {
-
-	//if (attribute & MDA_ATTRIBUTE_NON_DISPLAY) return;
-
+static void mda_draw_background(DISPLAY_INSTANCE* display, const SDL_FRect* rect, const uint8_t attribute) {
 	/* render background */
 	if (attribute & MDA_ATTRIBUTE_BW) {
 		SDL_SetRenderDrawColor(display->window->renderer, 0, 0, 0, 0xFF);
@@ -74,13 +117,9 @@ static void mda_draw_background(DISPLAY_INSTANCE* display, SDL_FRect* rect, uint
 	}
 	SDL_RenderFillRect(display->window->renderer, rect);
 }
-static void mda_draw_character(DISPLAY_INSTANCE* display, SDL_FRect* rect, uint8_t character, uint8_t attribute, int blink) {
-
-	if (character == 0) return;
-	//if (attribute & MDA_ATTRIBUTE_NON_DISPLAY) return;
-		
-	/* only render character if not blinking or blink < 15 (half time) */
-	if ((attribute & MDA_ATTRIBUTE_BLINK) && blink < 15) {
+static void mda_draw_character(DISPLAY_INSTANCE* display, const SDL_FRect* rect, const uint8_t character, const uint8_t attribute) {
+	/* only render character if not blinking or blink < blink_count (half time) */
+	if ((ibm_pc->mda.mode & MDA_MODE_BLINK_ENABLE) && (attribute & MDA_ATTRIBUTE_BLINK) && ibm_pc->mda.blink < 0x0F) {
 		return;
 	}
 
@@ -93,42 +132,62 @@ static void mda_draw_character(DISPLAY_INSTANCE* display, SDL_FRect* rect, uint8
 	}
 	SDL_RenderTexture(display->window->renderer, display->font_data->textures[character], NULL, rect);
 }
+static void mda_draw_cursor(DISPLAY_INSTANCE* display, const SDL_FRect* rect, const uint8_t attribute) {
+
+	if ((ibm_pc->mda.crtc.cursor_start & CRTC_6845_CURSOR_ATTR_MASK) == CRTC_6845_CURSOR_ATTR_DISABLED) {
+		return;
+	}
+
+	/* dont render cursor if blink rate < half time */
+	if ((ibm_pc->mda.blink & 0x1F) < 0x0F) {
+		return;
+	}
+
+	/* render cursor */
+	if (attribute & MDA_ATTRIBUTE_BW) {
+		SDL_SetTextureColorMod(display->font_data->textures['_'], 0xFF, 0xFF, 0xFF);
+	}
+	else {
+		SDL_SetTextureColorMod(display->font_data->textures['_'], 0, 0, 0);
+	}
+	SDL_RenderTexture(display->window->renderer, display->font_data->textures['_'], NULL, rect);
+}
 static void mda_text_draw_screen(DISPLAY_INSTANCE* display) {
 
 	/* get cell dimensions */
-	display->cell_w = display->window->transform.w / ibm_pc->mda.columns;
-	display->cell_h = display->window->transform.h / ibm_pc->mda.rows;
+	float offset_x;
+	float offset_y;
+	get_cell_dimensions(display, ibm_pc->mda.crtc.hdisp, ibm_pc->mda.crtc.vdisp, &offset_x, &offset_y);
 
 	/* increment blink; count to 31 */
 	ibm_pc->mda.blink = (ibm_pc->mda.blink++) & 0x1F;
 
-	SDL_FRect rect = { 0 }; 
-	int row = 0;
-	int column = 0;
-	uint8_t attribute = 0;
-	for (row = 0; row < ibm_pc->mda.rows; row++) {
-		for (column = 0; column < ibm_pc->mda.columns; column++) {
-			const uint16_t address_register = (ibm_pc->mda.crtc.registers[CRTC_6845_ADDRESS_HI]) << 8 | ibm_pc->mda.crtc.registers[CRTC_6845_ADDRESS_LO];
-			const uint32_t offset = ((row * (ibm_pc->mda.columns * 2)) + column * 2);
-			const uint32_t address = MDA_MM_BASE_ADDRESS + ((address_register + offset) & MDA_MM_ADDRESS_MASK);
-			const uint8_t character = ibm_pc->cpu.funcs.read_mem_byte(address);
-			attribute = ibm_pc->cpu.funcs.read_mem_byte(address + 1);
-			display_update_cell_position(display, &rect, ibm_pc->mda.rows, ibm_pc->mda.columns, row, column);
+	for (uint8_t row = 0; row < ibm_pc->mda.crtc.vdisp; ++row) {
+		for (uint8_t column = 0; column < ibm_pc->mda.crtc.hdisp; ++column) {
+			const uint16_t char_index = ibm_pc->mda.crtc.start_address + row * ibm_pc->mda.crtc.hdisp + column;
+			const uint32_t char_address = MDA_PHYS_ADDRESS(char_index * 2);
+			const uint8_t character = ibm_pc->cpu.funcs.read_mem_byte(char_address);
+			const uint8_t attribute = ibm_pc->cpu.funcs.read_mem_byte(char_address + 1);
+			
+			/* get cell position */
+			SDL_FRect rect;
+			get_cell_position(display, offset_x, offset_y, column, row, &rect);
+			
+			/* draw text */
 			mda_draw_background(display, &rect, attribute);
-			mda_draw_character(display, &rect, character, attribute, ibm_pc->mda.blink);
+			mda_draw_character(display, &rect, character, attribute);
+
+			/* draw cursor */
+			if (char_index == ibm_pc->mda.crtc.cursor_address) {
+				mda_draw_cursor(display, &rect, attribute);
+			}
 		}
 	}
-
-	/* draw cursor */
-	display_update_cursor_position(&ibm_pc->mda.crtc, MDA_BYTES_PER_ROW, &row, &column);
-	display_update_cell_position(display, &rect, ibm_pc->mda.rows, ibm_pc->mda.columns, row, column);
-	attribute = (MDA_ATTRIBUTE_BW | MDA_ATTRIBUTE_BLINK); /* invert BG/FG, force blink */
-	mda_draw_character(display, &rect, '_', attribute, ibm_pc->mda.blink);
 }
 static void mda_draw_screen(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display) {
 	(void)instance;
 	if (!(ibm_pc->mda.mode & MDA_MODE_VIDEO_ENABLE)) {
-		disabled_draw_screen(display, ibm_pc->mda.width, ibm_pc->mda.height, "ADAPTER NOT ENABLED");
+		disabled_draw_screen(instance);
 		return;
 	}
 	
@@ -136,266 +195,287 @@ static void mda_draw_screen(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display
 }
 
 /* CGA */
-#define CGA_BYTES_PER_ROW 80
-typedef struct COLOR_PALETTE {
-	uint8_t r;
-	uint8_t b;
-	uint8_t g;
-	uint8_t br;
-} COLOR_PALETTE;
+#define CGA_COLOR_BLACK          0  /* black */
+#define CGA_COLOR_BLUE           1  /* blue */
+#define CGA_COLOR_GREEN          2  /* green */
+#define CGA_COLOR_CYAN           3  /* cyan */
+#define CGA_COLOR_RED            4  /* red */
+#define CGA_COLOR_MAGENTA        5  /* magenta */
+#define CGA_COLOR_BROWN          6  /* brown */
+#define CGA_COLOR_WHITE          7  /* white */
+#define CGA_COLOR_BRIGHT_BLACK   8  /* bright black */
+#define CGA_COLOR_BRIGHT_BLUE    9  /* bright blue */
+#define CGA_COLOR_BRIGHT_GREEN   10 /* bright green */
+#define CGA_COLOR_BRIGHT_CYAN    11 /* bright cyan */
+#define CGA_COLOR_BRIGHT_RED     12 /* bright red */
+#define CGA_COLOR_BRIGHT_MAGENTA 13 /* bright magenta */
+#define CGA_COLOR_BRIGHT_YELLOW  14 /* bright yellow */
+#define CGA_COLOR_BRIGHT_WHITE   15 /* bright white */
+
+static const COLOR_RGB cga_colors[16] = {
+		{ 0x00, 0x00, 0x00 }, /* black */
+		{ 0x00, 0x00, 0xAA }, /* blue */
+		{ 0x00, 0xAA, 0x00 }, /* green */
+		{ 0x00, 0xAA, 0xAA }, /* cyan */
+		{ 0xAA, 0x00, 0x00 }, /* red */
+		{ 0xAA, 0x00, 0xAA }, /* magenta */
+		{ 0xAA, 0x55, 0x00 }, /* brown */
+		{ 0xAA, 0xAA, 0xAA }, /* white */
+
+		{ 0x55, 0x55, 0x55 }, /* bright black */
+		{ 0x55, 0x55, 0xFF }, /* bright blue */
+		{ 0x55, 0xFF, 0x55 }, /* bright green */
+		{ 0x55, 0xFF, 0xFF }, /* bright cyan */
+		{ 0xFF, 0x55, 0x55 }, /* bright red */
+		{ 0xFF, 0x55, 0xFF }, /* bright magenta */
+		{ 0xFF, 0xFF, 0x55 }, /* bright yellow */
+		{ 0xFF, 0xFF, 0xFF }, /* bright white */
+};
 
 static void cga_graphics_draw_lo_res(DISPLAY_INSTANCE* display) {
-	/* 4 colors @ 320px. 1byte = 4px. b00 = col1, b01 = col2, b10 = col3, b11 = col4 */
-
-		/* color palettes */
-	const COLOR_PALETTE palette0[4] = {
-		{ .r = 0xFF, /* red */
-		  .b = 0,
-		  .g = 0,
-		  .br = 0x80 },
-
-		{ .r = 0,    /* green */
-		  .b = 0,
-		  .g = 0xFF,
-		  .br = 0x80 },
-
-		{ .r = 0xFF, /* yellow */
-		  .b = 0,
-		  .g = 0xFF,
-		  .br = 0x80 },
-
-		{ .r = 0,    /* black? */
-		  .b = 0,
-		  .g = 0,
-		  .br = 0x80 },
+	const uint8_t palette0[8] = {
+		(ibm_pc->cga.color & CGA_COLOR_BG),
+		CGA_COLOR_GREEN,
+		CGA_COLOR_RED,
+		CGA_COLOR_BROWN,
+		(ibm_pc->cga.color & CGA_COLOR_BG),
+		CGA_COLOR_BRIGHT_GREEN,
+		CGA_COLOR_BRIGHT_RED,
+		CGA_COLOR_BRIGHT_YELLOW,
 	};
-	const COLOR_PALETTE palette1[4] = {
-		{ .r = 0xFF, /* magenta */
-		  .b = 0xFF,
-		  .g = 0,
-		  .br = 0 },
-
-		{ .r = 0,   /* cyan */
-		  .b = 0xFF,
-		  .g = 0xFF,
-		  .br = 0x80 },
-
-		{ .r = 0xFF, /* white */
-		  .b = 0xFF,
-		  .g = 0xFF,
-		  .br = 0x80 },
-
-		{ .r = 0,   /* black? */
-		  .b = 0,
-		  .g = 0,
-		  .br = 0x80 },
+	const uint8_t palette1[8] = {
+		(ibm_pc->cga.color & CGA_COLOR_BG),
+		CGA_COLOR_CYAN,
+		CGA_COLOR_MAGENTA,
+		CGA_COLOR_WHITE,
+		(ibm_pc->cga.color & CGA_COLOR_BG),
+		CGA_COLOR_BRIGHT_CYAN,
+		CGA_COLOR_BRIGHT_MAGENTA,
+		CGA_COLOR_BRIGHT_WHITE,
 	};
-	const COLOR_PALETTE palette2[4] = {
-		{ .r = 0,    /* black */
-		  .b = 0,
-		  .g = 0,
-		  .br = 0x80 },
-
-		{ .r = 0xFF, /* red */
-		  .b = 0,
-		  .g = 0,
-		  .br = 0x80 },
-
-		{ .r = 0,    /* cyan */
-		  .b = 0xFF,
-		  .g = 0xFF,
-		  .br = 0x80 },
-
-		{ .r = 0xFF, /* white */
-		  .b = 0xFF,
-		  .g = 0xFF,
-		  .br = 0x80 },
+	const uint8_t palette2[8] = {
+		(ibm_pc->cga.color & CGA_COLOR_BG),
+		CGA_COLOR_CYAN,
+		CGA_COLOR_RED,
+		CGA_COLOR_WHITE,
+		(ibm_pc->cga.color & CGA_COLOR_BG),
+		CGA_COLOR_BRIGHT_CYAN,
+		CGA_COLOR_BRIGHT_RED,
+		CGA_COLOR_BRIGHT_WHITE,
 	};
+		
+	const int pixels_per_byte = 4;
+	const int bytes_per_row = ibm_pc->cga.width / pixels_per_byte;
 
-#if 1
-	/* get boarder color */
-	uint8_t b = se(ibm_pc->cga.color & CGA_COLOR_BOADER_B);
-	uint8_t g = se(ibm_pc->cga.color & CGA_COLOR_BOADER_G);
-	uint8_t r = se(ibm_pc->cga.color & CGA_COLOR_BOADER_R);
-	uint8_t br = se(ibm_pc->cga.color & CGA_COLOR_BOADER_BR);
+	/* get cell dimensions */
+	float offset_x;
+	float offset_y;
+	get_cell_dimensions(display, ibm_pc->cga.width, ibm_pc->cga.height, &offset_x, &offset_y);
 
-	/* draw boarder/background */
-	SDL_SetRenderDrawColor(display->window->renderer, r, g, b, (0x80 + br) & 0xFF);
-	SDL_FRect rect = { .x = 0, .y = 0, .w = (float)display->window->transform.w, .h = (float)display->window->transform.h };
-	SDL_RenderFillRect(display->window->renderer, &rect);
+#if 0
+	/* draw boarder */
+	fill_screen(display, cga_colors[(ibm_pc->cga.color & CGA_COLOR_BG)]);
 #endif
 
-	if (ibm_pc->cga.color & CGA_COLOR_BRIGHT_FG) {
-		/*foreground colours display in high intensity */
+	// choose color palette
+	const uint8_t* palette;
+	if (ibm_pc->cga.mode & CGA_MODE_BW) {
+		palette = &palette2[0];
+	}
+	else if (ibm_pc->cga.color & CGA_COLOR_PALETTE) {
+		palette = &palette1[0];
+	} 
+	else {
+		palette = &palette0[0];
 	}
 
-	if (ibm_pc->cga.color & CGA_COLOR_PALETTE) {
-		/* If set, the fixed colours in the palette are magenta, cyan and white. If clr, they're red, green and yellow
-		   Bit 2 in the mode control register (if set) overrides this bit */
-	}
+	for (int y = 0; y < ibm_pc->cga.height; ++y) {
+		uint16_t base = (y & 1) ? 0x2000 : 0x0000;
+		uint32_t row_offset = (y >> 1) * bytes_per_row;
 
-	for (int y = 0; y < CGA_HI_RES_GRAPHICS_HEIGHT; ++y) {
-		for (int x = 0; x < CGA_BYTES_PER_ROW; ++x) {
-			const uint16_t address_register = (ibm_pc->cga.crtc.registers[CRTC_6845_ADDRESS_HI]) << 8 | ibm_pc->cga.crtc.registers[CRTC_6845_ADDRESS_LO];
-			const uint32_t offset = (y * CGA_BYTES_PER_ROW) + x;
-			const uint32_t address = CGA_MM_BASE_ADDRESS + ((address_register + offset) & CGA_MM_ADDRESS_MASK);
-			uint8_t pixel_data = ibm_pc->cpu.funcs.read_mem_byte(address);
-			for (int p = 0; p < 4; ++p) {
-				uint8_t sel = pixel_data & 0x3;
-				if (ibm_pc->cga.mode & CGA_MODE_BW) {
-					SDL_SetRenderDrawColor(display->window->renderer, palette2[sel].r, palette2[sel].g, palette2[sel].b, palette2[sel].br);
-				}
-				else {
-					if (ibm_pc->cga.color & CGA_COLOR_PALETTE) {
-						SDL_SetRenderDrawColor(display->window->renderer, palette1[sel].r, palette1[sel].g, palette1[sel].b, palette1[sel].br);
-					}
-					else {
-						SDL_SetRenderDrawColor(display->window->renderer, palette0[sel].r, palette0[sel].g, palette0[sel].b, palette0[sel].br);
-					}
-				}
-				pixel_data >>= 2;
-
-				SDL_FRect rect1 = {
-					.x = (float)CENTER(display->window->transform.w, ibm_pc->cga.width, (offset * 4) + p),
-					.y = (float)CENTER(display->window->transform.h, ibm_pc->cga.height, (offset / 4) + p),
-					.w = (float)display->cell_w,
-					.h = (float)display->cell_h
-				};
-				SDL_RenderFillRect(display->window->renderer, &rect1);
-			}
-		}
-	}
-}
-
-static void cga_graphics_draw_hi_res(DISPLAY_INSTANCE* display) {
-	/* 2 colors @ 640px. 1byte = 8px. b0 = col1, b1 = col2 */
-
-		/* color palette */
-	const COLOR_PALETTE palette[2] = {
-		{.r = 0xFF, /* white */
-		  .b = 0xFF,
-		  .g = 0xFF,
-		  .br = 0x80 },
-
-		{.r = 0,    /* black */
-		  .b = 0,
-		  .g = 0,
-		  .br = 0x80 },
-	};
-
-	for (int y = 0; y < CGA_HI_RES_GRAPHICS_HEIGHT; ++y) {
-		for (int x = 0; x < CGA_BYTES_PER_ROW; ++x) {
-			const uint16_t address_register = (ibm_pc->cga.crtc.registers[CRTC_6845_ADDRESS_HI]) << 8 | ibm_pc->cga.crtc.registers[CRTC_6845_ADDRESS_LO];
-			const uint32_t offset = (y * CGA_BYTES_PER_ROW) + x;
-			const uint32_t address = CGA_MM_BASE_ADDRESS + ((address_register + offset) & CGA_MM_ADDRESS_MASK);
+		for (int x = 0; x < bytes_per_row; ++x) {
+			uint32_t address = CGA_PHYS_ADDRESS(base + row_offset + x);
 			uint8_t byte = ibm_pc->cpu.funcs.read_mem_byte(address);
-			for (int p = 0; p < 8; ++p) {
-				SDL_SetRenderDrawColor(display->window->renderer, palette[byte & 0x1].r, palette[byte & 0x1].g, palette[byte & 0x1].b, palette[byte & 0x1].br);
-				byte >>= 1;
 
-				SDL_FRect rect = {
-					.x = (float)CENTER(display->window->transform.w, ibm_pc->cga.width, (offset * 8) + p),
-					.y = (float)CENTER(display->window->transform.h, ibm_pc->cga.height, (offset / 8) + p),
-					.w = (float)display->cell_w,
-					.h = (float)display->cell_h
-				};
+			for (int bit = 6; bit >= 0; bit -= 2) {
+				const uint8_t color_index = ((byte >> bit) & 0x3) | (ibm_pc->cga.color & CGA_COLOR_BRIGHT_FG) >> 2;
+				const COLOR_RGB c = cga_colors[palette[color_index]];
+				SDL_SetRenderDrawColor(display->window->renderer, c.r, c.g, c.b, 0xFF);
+
+				/* get cell position */
+				SDL_FRect rect;
+				get_cell_position(display, offset_x, offset_y, ((x * pixels_per_byte) + (3 - bit / 2)), y, &rect);
+
 				SDL_RenderFillRect(display->window->renderer, &rect);
 			}
 		}
 	}
 }
-static void cga_draw_background(DISPLAY_INSTANCE* display, SDL_FRect* rect, uint8_t attribute) {
+static void cga_graphics_draw_hi_res(DISPLAY_INSTANCE* display) {
 
-	/* render background */
-	uint8_t b = sx(attribute & CGA_ATTRIBUTE_B_BG);
-	uint8_t g = sx(attribute & CGA_ATTRIBUTE_G_BG);
-	uint8_t r = sx(attribute & CGA_ATTRIBUTE_R_BG);
-	uint8_t br = (attribute & CGA_ATTRIBUTE_BR_BG) >> 1;
-	SDL_SetRenderDrawColor(display->window->renderer, r + br, g + br, b + br, 0xFF);
-	SDL_RenderFillRect(display->window->renderer, rect);
-}
-static void cga_draw_character(DISPLAY_INSTANCE* display, SDL_FRect* rect, uint8_t character, uint8_t attribute, int blink) {
-	if (character == 0) {
-		return;
-	}
-	/* only render character if not blinking or blink < 15 (half time) */
-	if (ibm_pc->cga.mode & CGA_MODE_BLINK_ENABLE) {
-		if ((attribute & CGA_ATTRIBUTE_BLINK) && blink < 15) {
-			return;
+	const int pixels_per_byte = 8;
+	const int bytes_per_row = ibm_pc->cga.width / pixels_per_byte;
+
+	/* get cell dimensions */
+	float offset_x;
+	float offset_y;
+	get_cell_dimensions(display, ibm_pc->cga.width, ibm_pc->cga.height, &offset_x, &offset_y);
+
+#if 0
+	/* draw boarder */
+	fill_screen(display, cga_colors[CGA_COLOR_BLACK]);
+#endif
+
+	for (int y = 0; y < ibm_pc->cga.height; ++y) {
+		uint16_t base = (y & 1) ? 0x2000 : 0x0000;
+		uint32_t row_offset = (y >> 1) * bytes_per_row;
+
+		for (int x = 0; x < bytes_per_row; ++x) {
+			uint32_t address = CGA_PHYS_ADDRESS(base + row_offset + x);
+			uint8_t byte = ibm_pc->cpu.funcs.read_mem_byte(address);
+
+			for (int bit = 7; bit >= 0; --bit) {
+				const uint8_t color_index = (byte >> bit) & 0x1;
+				const COLOR_RGB* c = &cga_colors[(ibm_pc->cga.color & CGA_COLOR_FG) * color_index];
+				SDL_SetRenderDrawColor(display->window->renderer, c->r, c->g, c->b, 0xFF);
+
+				/* get cell position */
+				SDL_FRect rect;
+				get_cell_position(display, offset_x, offset_y, ((x * pixels_per_byte) + (7 - bit)), y, &rect);
+
+				SDL_RenderFillRect(display->window->renderer, &rect);
+			}
 		}
 	}
+}
+
+static void cga_draw_background(DISPLAY_INSTANCE* display, const SDL_FRect* rect, const uint8_t attribute) {
+	/* render background */
+	uint8_t index = (attribute & CGA_ATTRIBUTE_BG) >> 4;
+	if (ibm_pc->cga.mode & CGA_MODE_BLINK_ENABLE) {
+		index &= 0x07; /* if MODE bit5 = 1, then ignore intensity bit (bit7) in attribute */
+	}
+	const COLOR_RGB col = cga_colors[index];
+	SDL_SetRenderDrawColor(display->window->renderer, col.r, col.g, col.b, 0xFF);
+	SDL_RenderFillRect(display->window->renderer, rect);
+}
+static void cga_draw_character(DISPLAY_INSTANCE* display, const SDL_FRect* rect, const uint8_t character, const uint8_t attribute) {
+	
+	/* only render char if MODE bit5 = 1 and ATTRIBUTE bit7 = 1 and blink interval is half time */
+	if ((ibm_pc->cga.mode & CGA_MODE_BLINK_ENABLE) && (attribute & CGA_ATTRIBUTE_BLINK) && ibm_pc->cga.blink < 0x0F) {
+		return;
+	}
+
+	float scanline_ratio = 1.0;
+	if (display->scanline_emu) {
+		scanline_ratio = (ibm_pc->cga.crtc.max_scanline + 1) / 8.0f;
+	}
+
+	// Get the actual texture dimensions
+	float tex_w;
+	float tex_h;
+	SDL_GetTextureSize(display->font_data->textures[character], &tex_w, &tex_h);
+
+	SDL_FRect src = {
+		.x = 0,
+		.y = 0,
+		.w = tex_w,
+		.h = tex_h * scanline_ratio,
+	};
 
 	/* render text */
-	uint8_t b = sx(attribute & CGA_ATTRIBUTE_B_FG);
-	uint8_t g = sx(attribute & CGA_ATTRIBUTE_G_FG);
-	uint8_t r = sx(attribute & CGA_ATTRIBUTE_R_FG);
-	uint8_t br = (attribute & CGA_ATTRIBUTE_BR_FG) << 3;
-	SDL_SetTextureColorMod(display->font_data->textures[character], r+br, g+br, b+br);
-	SDL_RenderTexture(display->window->renderer, display->font_data->textures[character], NULL, rect);
+	const COLOR_RGB col = cga_colors[(attribute & CGA_ATTRIBUTE_FG)];
+	SDL_SetTextureColorMod(display->font_data->textures[character], col.r, col.g, col.b);
+	SDL_SetTextureScaleMode(display->font_data->textures[character], display->scale_mode);
+	SDL_RenderTexture(display->window->renderer, display->font_data->textures[character], &src, rect);
+}
+static void cga_draw_cursor(DISPLAY_INSTANCE* display, const SDL_FRect* rect, const uint8_t attribute) {
+
+	/* The IBM CGA Adapter ignores the CRTCs internal blink rate logic.
+	 Bits 5,6 = b01 disables the cursor (The CRTC stops asserting CURSOR).
+	 Bits 5,6 = b00, b10, b11 all display the cursor and blinks at the same fixed hardware rate. */
+	
+	if ((ibm_pc->cga.crtc.cursor_start & CRTC_6845_CURSOR_ATTR_MASK) == CRTC_6845_CURSOR_ATTR_DISABLED) {
+		return;
+	}
+
+	/* dont render cursor if blink rate < half time */
+	if ((ibm_pc->cga.blink & 0x1F) < 0x0F) {
+		return;
+	}
+
+	float scanline_ratio = 1.0;
+	if (display->scanline_emu) {
+		scanline_ratio = (ibm_pc->cga.crtc.max_scanline + 1) / 8.0f;
+	}
+
+	SDL_FRect src = {
+		.x = 0,
+		.y = 0,
+		.w = rect->w,
+		.h = rect->h * scanline_ratio,
+	};
+
+	/* render text */
+	const COLOR_RGB  col = cga_colors[(attribute & CGA_ATTRIBUTE_FG)];
+	SDL_SetTextureColorMod(display->font_data->textures['_'], col.r, col.g, col.b);
+	SDL_SetTextureScaleMode(display->font_data->textures['_'], display->scale_mode);
+	SDL_RenderTexture(display->window->renderer, display->font_data->textures['_'], &src, rect);
 }
 static void cga_text_draw_screen(DISPLAY_INSTANCE* display) {
 
 	/* get cell dimensions */
-	display->cell_w = display->window->transform.w / ibm_pc->cga.columns;
-	display->cell_h = display->window->transform.h / ibm_pc->cga.rows;
-	
+	float offset_x;
+	float offset_y;
+	get_cell_dimensions(display, ibm_pc->cga.crtc.hdisp, ibm_pc->cga.crtc.vdisp, &offset_x, &offset_y);
+
 	/* increment blink; count to 31 */
 	ibm_pc->cga.blink = (ibm_pc->cga.blink++) & 0x1F;
-
-#if 0
-	/* get boarder color */
-	uint8_t b  = se(ibm_pc->cga.color & CGA_COLOR_BOADER_B);
-	uint8_t g  = se(ibm_pc->cga.color & CGA_COLOR_BOADER_G);
-	uint8_t r  = se(ibm_pc->cga.color & CGA_COLOR_BOADER_R);
-	uint8_t br = se(ibm_pc->cga.color & CGA_COLOR_BOADER_BR);
 	
-	if (ibm_pc->cga.mode & CGA_MODE_HI_RES_GRAPH) {
+#if 0
+	/* draw boarder */
+	if (ibm_pc->cga.mode & CGA_MODE_GRAPHICS_RES_HI) {
 		/* In text mode, setting this bit has the following effects:
 		   - The border is always black.
 		   - The characters displayed are missing columns - as if the bit pattern has 
 		     been ANDed with another value. According to reenigne.org, the value is the
 		     equivalent bit pattern from the 640x200 graphics mode. */
-		r = 0;
-		b = 0;
-		g = 0;
+		fill_screen(display, cga_colors[CGA_COLOR_BLACK]);
 	}
-
-	/* draw boarder */
-	SDL_SetRenderDrawColor(window_state->renderer, r, g, b, (0x80 + br) & 0xFF);
-	SDL_FRect rect = { .x = 0, .y = 0, .w = (float)window_state->win.w, .h = (float)window_state->win.h };
-	SDL_RenderFillRect(window_state->renderer, &rect);
+	else {
+		fill_screen(display, cga_colors[ibm_pc->cga.color & CGA_COLOR_BG]);
+	}
 #endif
 
-	/* draw text */
-	SDL_FRect rect = { 0 };
-	uint8_t attribute = 0;
-	int row = 0;
-	int column = 0;
-	for (row = 0; row < ibm_pc->cga.rows; row++) {
-		for (column = 0; column < ibm_pc->cga.columns; column++) {
-			const uint16_t address_register = (ibm_pc->cga.crtc.registers[CRTC_6845_ADDRESS_HI]) << 8 | ibm_pc->cga.crtc.registers[CRTC_6845_ADDRESS_LO];
-			const uint32_t offset = ((row * (ibm_pc->cga.columns * 2)) + column * 2);
-			const uint32_t address = CGA_MM_BASE_ADDRESS + ((address_register + offset) & CGA_MM_ADDRESS_MASK);
-			const uint8_t character = ibm_pc->cpu.funcs.read_mem_byte(address);
-			attribute = ibm_pc->cpu.funcs.read_mem_byte(address + 1);
-			display_update_cell_position(display, &rect, ibm_pc->cga.rows, ibm_pc->cga.columns, row, column);
+	for (uint8_t row = 0; row < ibm_pc->cga.crtc.vdisp; ++row) {
+		for (uint8_t column = 0; column < ibm_pc->cga.crtc.hdisp; ++column) {
+			const uint16_t char_index = ibm_pc->cga.crtc.start_address + row * ibm_pc->cga.crtc.hdisp + column;
+			const uint32_t char_address = CGA_PHYS_ADDRESS(char_index * 2);
+			const uint8_t character = ibm_pc->cpu.funcs.read_mem_byte(char_address);
+			const uint8_t attribute = ibm_pc->cpu.funcs.read_mem_byte(char_address + 1);
+			
+			/* get cell position */
+			SDL_FRect rect;
+			get_cell_position(display, offset_x, offset_y, column, row, &rect);
+
+			/* draw text */
 			cga_draw_background(display, &rect, attribute);
-			cga_draw_character(display, &rect, character, attribute, ibm_pc->cga.blink);
+			cga_draw_character(display, &rect, character, attribute);
+
+			/* draw cursor */
+			if (char_index == ibm_pc->cga.crtc.cursor_address) {
+				cga_draw_cursor(display, &rect, attribute);
+			}
 		}
 	}
-
-	/* draw cursor */
-	display_update_cursor_position(&ibm_pc->cga.crtc, CGA_BYTES_PER_ROW, &row, &column);
-	display_update_cell_position(display, &rect, ibm_pc->cga.rows, ibm_pc->cga.columns, row, column);
-	attribute = 0x77 | CGA_ATTRIBUTE_BLINK; /* invert BG/FG, force blink */
-	cga_draw_character(display, &rect, '_', attribute, ibm_pc->cga.blink);
 }
+
 static void cga_draw_screen(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display) {
 	(void)instance;
-	/*if (!(ibm_pc->cga.mode & CGA_MODE_VIDEO_ENABLE)) {
-		disabled_draw_screen(display, ibm_pc->cga.width, ibm_pc->cga.height, "ADAPTER NOT ENABLED");
+	if (!(ibm_pc->cga.mode & CGA_MODE_VIDEO_ENABLE)) {
+		disabled_draw_screen(instance);
 		return;
-	}*/
+	}
 
 	if (ibm_pc->cga.mode & CGA_MODE_GRAPHICS) {
 		if (ibm_pc->cga.mode & CGA_MODE_GRAPHICS_RES_HI) {
@@ -410,16 +490,15 @@ static void cga_draw_screen(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display
 	}
 }
 
-void display_on_video_adapter_changed(DISPLAY_INSTANCE* display, uint8_t video_adapter) {
+void display_on_video_adapter_changed(DISPLAY_INSTANCE* display, const uint8_t video_adapter) {
 	if (display->window != NULL) {
 		switch (video_adapter) {
 			case VIDEO_ADAPTER_MDA_80X25:
 				sdl_timing_init_frame(&display->window->time, HZ_TO_MS(50.0));
-				display->window->on_render = mda_draw_screen;
-				display->window->on_render_param = display;
+				display->window->on_render[display->on_render_index] = mda_draw_screen;
+				display->window->on_render_param[display->on_render_index] = display;
 
-				display_set_font(display, "Bm437_IBM_MDA.FON", 9, 14);
-				if (display_generate_font_map(display)) {
+				if (display_generate_font_map(display, "Bm437_IBM_MDA.FON")) {
 					exit(1);
 				}
 				dbg_print("[DISPLAY] Video adapter: MDA\n");
@@ -427,19 +506,18 @@ void display_on_video_adapter_changed(DISPLAY_INSTANCE* display, uint8_t video_a
 			case VIDEO_ADAPTER_CGA_40X25:
 			case VIDEO_ADAPTER_CGA_80X25:
 				sdl_timing_init_frame(&display->window->time, HZ_TO_MS(60.0));
-				display->window->on_render = cga_draw_screen;
-				display->window->on_render_param = display;
+				display->window->on_render[display->on_render_index] = cga_draw_screen;
+				display->window->on_render_param[display->on_render_index] = display;
 
-				display_set_font(display, "Bm437_IBM_CGA.FON", 8, 8);
-				if (display_generate_font_map(display)) {
+				if (display_generate_font_map(display, "Bm437_IBM_CGA.FON")) {
 					exit(1);
 				}
 				dbg_print("[DISPLAY] Video adapter: CGA\n");
 				break;
 			case VIDEO_ADAPTER_NONE:
 				sdl_timing_init_frame(&display->window->time, HZ_TO_MS(60.0));
-				display->window->on_render = dummy_draw_screen;
-				display->window->on_render_param = display;
+				display->window->on_render[display->on_render_index] = dummy_draw_screen;
+				display->window->on_render_param[display->on_render_index] = display;
 				dbg_print("[DISPLAY] Video adapter: DUMMY\n");
 				break;
 		}
@@ -448,6 +526,25 @@ void display_on_video_adapter_changed(DISPLAY_INSTANCE* display, uint8_t video_a
 		dbg_print("[DISPLAY] Video adapter: HEADLESS\n");
 	}
 }
+int display_generate_font_map(DISPLAY_INSTANCE* display, const char* font_path) {
+	if (display == NULL) {
+		dbg_print("[DISPLAY] display is NULL\n");
+		return 1;
+	}
+	
+	/* Create font texture map */
+	if (font_open_font(display->font_data, font_path)) {
+		return 1;
+	}
+
+	font_destroy_textures(display->font_data);
+
+	if (font_create_textures(display->window->renderer, display->window->text_engine, display->font_data)) {
+		return 1;
+	}
+
+	return 0;
+}
 
 int display_create(DISPLAY_INSTANCE** display, WINDOW_INSTANCE* window) {
 	if (display == NULL) {
@@ -455,7 +552,7 @@ int display_create(DISPLAY_INSTANCE** display, WINDOW_INSTANCE* window) {
 		return 1;
 	}
 
-	*display = (DISPLAY_INSTANCE*)calloc(1, sizeof(DISPLAY_INSTANCE));
+	*display = calloc(1, sizeof(DISPLAY_INSTANCE));
 	if (*display == NULL) {
 		dbg_print("[DISPLAY] Failed to allocate memory\n");
 		return 1;
@@ -463,36 +560,17 @@ int display_create(DISPLAY_INSTANCE** display, WINDOW_INSTANCE* window) {
 
 	(*display)->window = window;
 
+	(*display)->on_render_index = window_instance_set_cb_on_render(window, dummy_draw_screen, display);
+
+	(*display)->scanline_emu = 1;
+	(*display)->correct_aspect_ratio = 1;
+	(*display)->scale_mode = SDL_SCALEMODE_NEAREST;
+
 	/* Create font texture map */
 	if (font_create_map(&(*display)->font_data)) {
 		return 1;
 	}
 	
-	return 0;
-}
-
-void display_set_font(DISPLAY_INSTANCE* display, const char* font_path, int font_w, int font_h) {
-	display->font_path = font_path;
-	display->font_w = font_w;
-	display->font_h = font_h;
-}
-int display_generate_font_map(DISPLAY_INSTANCE* display) {
-	if (display == NULL) {
-		dbg_print("[DISPLAY] display is NULL\n");
-		return 1;
-	}
-
-	/* Create font texture map */
-	if (display->font_data->ttf == NULL) {
-		if (font_open_font(display->font_data, display->font_path)) {
-			return 1;
-		}
-	}
-
-	if (font_create_textures(display->window->renderer, display->window->text_engine, display->font_w, display->font_h, display->font_data)) {
-		return 1;
-	}
-
 	return 0;
 }
 void display_destroy(DISPLAY_INSTANCE* instance) {
