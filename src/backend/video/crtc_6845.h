@@ -97,15 +97,29 @@
 
 /* Cursor Attributes (R10) */
 #define CRTC_6845_CURSOR_ATTR_MASK       0x60 /* Attribute mask */
-#define CRTC_6845_CURSOR_ATTR_SOILD      0x00 /* enabled; non-blink */
-#define CRTC_6845_CURSOR_ATTR_DISABLED   0x20 /* disabled; non-blink */
-#define CRTC_6845_CURSOR_ATTR_BLINK_FAST 0x40 /* enabled; fast blink */
-#define CRTC_6845_CURSOR_ATTR_BLINK_SLOW 0x60 /* enabled; slow blink */
+#define CRTC_6845_CURSOR_ATTR_SOILD      0x00 /* non-blink */
+#define CRTC_6845_CURSOR_ATTR_DISABLED   0x20 /* non-display */
+#define CRTC_6845_CURSOR_ATTR_BLINK_FAST 0x40 /* blink 1/16 */
+#define CRTC_6845_CURSOR_ATTR_BLINK_SLOW 0x60 /* blink 1/32 */
 
  /* Cathode Ray Tube Controller 6845 */
 typedef struct CRTC_6845 {
-	uint8_t index; /* 5bit write only */
-	uint8_t registers[CRTC_6845_REG_COUNT];
+	uint8_t index;             /* index    5bit write only */
+	uint8_t htotal;            /* R00      8bit write-only */
+	uint8_t hdisp;             /* R01      8bit write-only */
+	uint8_t hsync_pos;         /* R02      8bit write-only */
+	uint8_t sync_width;        /* R03      8bit write-only */
+	uint8_t vtotal;            /* R04      7bit write-only */
+	uint8_t vtotal_adjust;     /* R05      5bit write-only */
+	uint8_t vdisp;             /* R06      7bit write-only */
+	uint8_t vsync_pos;         /* R07      7bit write-only */
+	uint8_t interlace_mode;    /* R08      2bit write-only */
+	uint8_t max_scanline;      /* R09      5bit write-only */
+	uint8_t cursor_start;      /* R10      7bit write-only */
+	uint8_t cursor_end;        /* R11      5bit write-only */
+	uint16_t start_address;    /* R12/R13 14bit write-only */
+	uint16_t cursor_address;   /* R14/R15 14bit read/write */
+	uint16_t lightpen_address; /* R16/R17 14bit read-only */
 } CRTC_6845;
 
 void crtc_6845_reset(CRTC_6845* crtc);

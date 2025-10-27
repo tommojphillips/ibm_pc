@@ -48,16 +48,16 @@
 #define MDA_MM_BASE_ADDRESS 0xB0000 // MM back address of MDA card
 #define MDA_MM_ADDRESS_MASK 0x0FFF  // MM address mask
 
+#define MDA_PHYS_ADDRESS(offset) (MDA_MM_BASE_ADDRESS + ((offset) & MDA_MM_ADDRESS_MASK))
+
 /* MDA State */
 typedef struct MDA {
 	CRTC_6845 crtc;         /* cathode ray tube controller */
 	uint8_t status;         /* status register */
 	uint8_t mode;           /* mode control register */
 	uint8_t blink;          /* blink variable */
-	int width;              /* display width */
-	int height;             /* display height */
-	int rows;               /* display rows (text mode only) */
-	int columns;            /* display columns (text mode only) */
+	uint16_t width;         /* display width */
+	uint16_t height;        /* display height */
 } MDA;
 
 /* hard reset mda */

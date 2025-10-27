@@ -7,7 +7,7 @@
 
 #include "mda.h"
 #include "crtc_6845.h"
-#include "../bit_utils.h"
+#include "backend/bit_utils.h"
 
 uint8_t mda_status(MDA* mda) {
 	mda->status ^= MDA_STATUS_HRETRACE; /* fake h retrace */
@@ -16,8 +16,6 @@ uint8_t mda_status(MDA* mda) {
 }
 void mda_mode(MDA* mda, uint8_t value) {
 	if (value & MDA_MODE_HI_RES) {
-		mda->columns = MDA_HI_RES_COLUMNS;
-		mda->rows = MDA_HI_RES_ROWS;
 		mda->width = MDA_HI_RES_WIDTH;
 		mda->height = MDA_HI_RES_HEIGHT;
 	}

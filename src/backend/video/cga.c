@@ -7,11 +7,12 @@
 
 #include "cga.h"
 #include "crtc_6845.h"
-#include "../bit_utils.h"
+#include "backend/bit_utils.h"
 
 static uint8_t cga_status(CGA* cga) {
-	cga->status ^= CGA_STATUS_HRETRACE; /* fake h retrace */
-	cga->status ^= CGA_STATUS_VRETRACE; /* fake v retrace */
+	//cga->status ^= CGA_STATUS_HRETRACE; /* fake h retrace */
+	//cga->status ^= CGA_STATUS_VRETRACE; /* fake v retrace */
+
 	return cga->status;
 }
 static void cga_color(CGA* cga, uint8_t value) {
@@ -21,15 +22,11 @@ static void cga_mode(CGA* cga, uint8_t value) {
 	if (value & CGA_MODE_GRAPHICS) {		
 		if (value & CGA_MODE_GRAPHICS_RES_HI) {
 			/* high res graphics mode */
-			cga->columns = 0;
-			cga->rows    = 0;
 			cga->width   = CGA_HI_RES_GRAPHICS_WIDTH;
 			cga->height  = CGA_HI_RES_GRAPHICS_HEIGHT;
 		}
 		else {
 			/* low res graphics mode */
-			cga->columns = 0;
-			cga->rows    = 0;
 			cga->width   = CGA_LO_RES_GRAPHICS_WIDTH;
 			cga->height  = CGA_LO_RES_GRAPHICS_HEIGHT;
 		}
@@ -37,15 +34,11 @@ static void cga_mode(CGA* cga, uint8_t value) {
 	else {
 		if (value & CGA_MODE_TEXT_RES_HI) {
 			/* high res text mode */
-			cga->columns = CGA_HI_RES_TEXT_COLUMNS;
-			cga->rows    = CGA_HI_RES_TEXT_ROWS;
 			cga->width   = CGA_HI_RES_TEXT_WIDTH;
 			cga->height  = CGA_HI_RES_TEXT_HEIGHT;
 		}
 		else {
 			/* low res text mode */
-			cga->columns = CGA_LO_RES_TEXT_COLUMNS;
-			cga->rows    = CGA_LO_RES_TEXT_ROWS;
 			cga->width   = CGA_LO_RES_TEXT_WIDTH;
 			cga->height  = CGA_LO_RES_TEXT_HEIGHT;
 		}
@@ -57,6 +50,10 @@ static void cga_mode(CGA* cga, uint8_t value) {
 void cga_reset(CGA* cga) {
 	crtc_6845_reset(&cga->crtc);
 	cga_mode(cga, CGA_MODE_TEXT | CGA_MODE_TEXT_RES_LO);
+
+	cga->color = 0;
+	cga->status = 0;
+	cga->blink = 0;
 }
 uint8_t cga_read_io_byte(CGA* cga, uint8_t io_address) {
 	switch (io_address) {
@@ -97,4 +94,26 @@ void cga_write_io_byte(CGA* cga, uint8_t io_address, uint8_t value) {
 			cga_color(cga, value);
 			break;
 	}
+}
+
+#define H_VISIBLE   320   // visible pixels per line
+#define H_TOTAL     384   // total pixels per line including retrace
+#define V_VISIBLE   200   // visible lines per frame
+#define V_TOTAL     262   // total lines per frame including vertical retrace
+
+void cga_tick(CGA* cga) {
+	cga->hcount++;
+	if (cga->hcount >= H_TOTAL) {
+		cga->hcount -= H_TOTAL;  // wrap horizontal
+		cga->vcount++;           // next line
+
+		if (cga->vcount >= V_TOTAL) {
+			cga->vcount -= V_TOTAL; // wrap vertical
+		}
+	}
+
+	// update status bits
+	cga->status &= ~(CGA_STATUS_HRETRACE | CGA_STATUS_VRETRACE); // clear H/V bits
+	if (cga->hcount >= H_VISIBLE) cga->status |= CGA_STATUS_HRETRACE; // H-retrace bit
+	if (cga->vcount >= V_VISIBLE) cga->status |= CGA_STATUS_VRETRACE; // V-retrace bit
 }
