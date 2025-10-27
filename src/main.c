@@ -1,6 +1,5 @@
 /* main.c
  * Thomas J. Armytage 2025 ( https://github.com/tommojphillips/ )
- * Intel 8086 CPU test main
  */
 
 #include <stdint.h>
@@ -32,6 +31,7 @@ typedef struct ARGS {
 	uint8_t sw1;
 	uint8_t sw2_provided;
 	uint8_t sw2;
+	uint8_t model;
 } ARGS;
 
 int next_arg(int argc, char** argv, int* i, const char** arg) {
@@ -55,6 +55,7 @@ void set_default_args(ARGS* args) {
 	args->sw1 = 0;
 	args->sw2_provided = 0;
 	args->sw2 = 0;
+	args->model = MODEL_5150_16_64;
 }
 
 void str_to_num(const char* str, uint32_t* num) {
@@ -121,9 +122,42 @@ int parse_args(ARGS* args, int argc, char** argv) {
 				}
 				arg += 2; /* skip over '[A-B]:' */
 			}
-			fdc_insert_disk(&ibm_pc->fdc, disk, arg);
+			fdd_eject_disk(&ibm_pc->fdc.fdd[disk]);
+			fdd_insert_disk(&ibm_pc->fdc.fdd[disk], arg);
 			disk++; /* increment disk number so subsequent disk files load into the next disk. */
 			args->disks_loaded++;
+			continue;
+		}
+
+		/* write protect disk A, B drive */
+		if (strncmp("-dwp", arg, 5) == 0 || strncmp("-disk-write-protect", arg, 20) == 0) {
+			
+			if (!next_arg(argc, argv, &i, &arg)) {
+				break;
+			}
+
+			if (strlen(arg) >= 2 && arg[1] == ':') {
+				/* convert A-Z, a-z to disk number */
+				if ((arg[0] >= 'A' && arg[0] <= 'Z')) {
+					disk = arg[0] - 'A';
+				}
+				else if (arg[0] >= 'a' && arg[0] <= 'z') {
+					disk = arg[0] - 'a';
+				}
+				else if (arg[0] >= '0' && arg[0] <= '9') {
+					/* already a number; convert to int (0-255) */
+					disk = strtol(arg, NULL, 10) & 0xFF;
+				}
+				else {
+					/* unknown disk format. expected
+					[A-B]:<path> or
+					[0-1]:<path> */
+					printf("Unknown disk format. Expected [A-B]:\n");
+					continue;
+				}
+				arg += 2; /* skip over '[A-B]:' */
+			}
+			ibm_pc->fdc.fdd[disk].status.write_protect = 1;
 			continue;
 		}
 
@@ -137,7 +171,7 @@ int parse_args(ARGS* args, int argc, char** argv) {
 			if (strncmp("mda", arg, 4) == 0 || strncmp("MDA", arg, 4) == 0) {
 				args->video_adapter = VIDEO_ADAPTER_MDA_80X25;
 			}
-			else if (strncmp("cga", arg, 4) == 0 || strncmp("CGA", arg, 4) || strncmp("cga80", arg, 6) == 0 || strncmp("CGA80", arg, 6) == 0) {
+			else if (strncmp("cga", arg, 4) == 0 || strncmp("CGA", arg, 4) == 0 || strncmp("cga80", arg, 6) == 0 || strncmp("CGA80", arg, 6) == 0) {
 				args->video_adapter = VIDEO_ADAPTER_CGA_80X25;
 			}
 			else if (strncmp("cga40", arg, 6) == 0 || strncmp("CGA40", arg, 6) == 0) {
@@ -343,6 +377,7 @@ int parse_args(ARGS* args, int argc, char** argv) {
 			str_to_num(arg, &sw1);
 
 			args->sw1 = sw1 & 0xFF;
+			args->sw1_provided = 1;
 			continue;
 		}
 
@@ -357,6 +392,26 @@ int parse_args(ARGS* args, int argc, char** argv) {
 			str_to_num(arg, &sw2);
 
 			args->sw2 = sw2 & 0xFF;
+			args->sw2_provided = 1;
+			continue;
+		}
+
+		/* sw2 */
+		if (strncmp("-model", arg, 7) == 0) {
+
+			if (!next_arg(argc, argv, &i, &arg)) {
+				break;
+			}
+
+			if (strncmp("5150_16_64", arg, 11) == 0) {
+				args->model = MODEL_5150_16_64;
+			}
+			else if (strncmp("5150_64_256", arg, 12) == 0) {
+				args->model = MODEL_5150_64_256;
+			}
+			else {
+				printf("Invalid model: %s\n", arg);
+			}
 			continue;
 		}
 
@@ -375,14 +430,15 @@ int parse_args(ARGS* args, int argc, char** argv) {
 		if (strncmp("-?", arg, 3) == 0) {
 
 			printf("ibm_pc.exe [-o <offset>] <rom_file> <extra_flags>\n"
-			       "-o <offset>             - Set load offset of the next ROM.\n"
-				   "<rom_file>              - Load ROM at offset; inc offset by ROM size.\n"
-			       "-disk [A-B:]<disk_path> - Load disk into drive A,B.\n"
-			       "-video <video_adapter>  - The video adapter to use MDA, CGA, CGA40, CGA80, NONE.\n"
-			       "-ram <ram>              - The amount of conventional ram. (16-64 in multiples of 16) or (64-768 in multiples of 32)\n"
-			       "-sw1 <sw1>              - Override sw1 setting.\n"
-			       "-sw2 <sw2>              - Override sw2 setting. \n"
-			       "-dbg                    - Display debug window.\n"
+			       "-o <offset>                - Set load offset of the next ROM.\n"
+				   "<rom_file>                 - Load ROM at offset; inc offset by ROM size.\n"
+			       "-disk [A-B:]<disk_path>    - Load disk into drive A,B.\n"
+			       "-disk-write-protect [A-B:] - Write protect disk in drive A,B.\n"
+			       "-video <video_adapter>     - The video adapter to use MDA, CGA, CGA40, CGA80, NONE.\n"
+			       "-ram <ram>                 - The amount of conventional ram. (16-64 in multiples of 16) or (64-768 in multiples of 32)\n"
+			       "-sw1 <sw1>                 - Override sw1 setting.\n"
+			       "-sw2 <sw2>                 - Override sw2 setting. \n"
+			       "-dbg                       - Display debug window.\n"
 			       "Numbers can be in decimal, hex or binary.\n");
 
 			return 1; /* exit */
@@ -427,17 +483,17 @@ int main(int argc, char** argv) {
 	sdl_add_cb_on_update(window_manager_update);
 
 	/* Create IBM PC */
-	if (ibm_pc_init()) {
+	if (ibm_pc_create()) {
 		exit(1);
 	}
-	
+
 	/* Parse command-line args */
 	ARGS args = { 0 };
 	set_default_args(&args);
 	if (parse_args(&args, argc, argv)) {
 		exit(1);
 	}
-		
+
 	WINDOW_INSTANCE* win1 = NULL;
 	DISPLAY_INSTANCE* display = NULL;
 	if (args.video_adapter != VIDEO_ADAPTER_NONE) {
@@ -446,9 +502,9 @@ int main(int argc, char** argv) {
 			exit(1);
 		}
 		win1->title = "5150";
-		window_instance_set_transform(win1, dbg_gui_w + gui_boarder_w_l, SDL_WINDOWPOS_CENTERED, 800, 550);
+		window_instance_set_transform(win1, dbg_gui_w + gui_boarder_w_l, SDL_WINDOWPOS_CENTERED, 800, 580);
 		window_instance_set_cb_on_process_event(win1, input_process_event);
-		window_instance_open(win1);		
+		window_instance_open(win1);
 
 		/* create display */
 		if (display_create(&display, win1)) {
@@ -493,8 +549,23 @@ int main(int argc, char** argv) {
 
 	/* Setup audio callbacks for backend */
 	//audio_set_cb_(sdl_audio_);
-		
-	/* Hard Reset PC */
+	
+	/* Get config */
+	ibm_pc->config.total_memory = args.total_memory;
+	ibm_pc->config.fdc_disks = args.disks_loaded;
+	ibm_pc->config.video_adapter = args.video_adapter;
+	ibm_pc->config.sw1_provided = args.sw1_provided;
+	ibm_pc->config.sw2_provided = args.sw2_provided;	
+	ibm_pc->config.sw1 = ~args.sw1; /* let the user enter the sws like on the planar. (inverted) */	
+	ibm_pc->config.sw2 = ~args.sw2; /* let the user enter the sws like on the planar. (inverted) */
+	ibm_pc->config.model = args.model;
+
+	/* Initialize IBM PC */
+	if (ibm_pc_init()) {
+		exit(1);
+	}
+
+	/* Hard Reset IBM PC */
 	ibm_pc_reset();
 
 	while (!sdl->quit) {
