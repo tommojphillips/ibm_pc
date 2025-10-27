@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 #include "i8253_pit.h"
-#include "../bit_utils.h"
+#include "backend/bit_utils.h"
 
 #define CHANNEL_0_PORT 0x0 // R/W
 #define CHANNEL_1_PORT 0x1 // R/W
