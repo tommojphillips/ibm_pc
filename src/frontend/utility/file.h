@@ -7,15 +7,7 @@
 
 #include <stdint.h>
 
-#include <stdio.h>
-#define file_tell  ftell
-#define file_open  fopen_s
-#define file_close fclose
-#define file_seek  fseek
-#define file_read  fread
-#define file_write fwrite
-#define file_t     FILE
-
 int file_read_into_buffer(const char* filename, void* buff, const size_t buff_size, const size_t offset, size_t* file_size, const size_t expected_size);
-
+int file_read_alloc_buffer(const char* filename, void** buff, size_t* file_size);
+const char* file_get_filename(const char* path);
 #endif
