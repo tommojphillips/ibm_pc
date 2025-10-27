@@ -20,10 +20,9 @@
 #include "video/mda.h"
 #include "video/cga.h"
 #include "fdd/fdc.h"
+#include "keyboard.h"
 
 #include "timing.h"
-
-//#define MNEM_PRINT 1
 
 /* CLOCK */
 
@@ -48,40 +47,74 @@
 #define PIT_CLOCK (CYSTRAL_14MHZ / PIT_CLOCK_DIVISOR) /* pit clock in Hz */
 
 /* DMA Clock */
-#define DMA_CLOCK_DIVISOR 8.732575
+#define DMA_CLOCK_DIVISOR 2.0
 #define DMA_CLOCK (CYSTRAL_14MHZ / DMA_CLOCK_DIVISOR) /* dma clock in Hz */
 
-#define VIDEO_ADAPTER_NONE 0
-#define VIDEO_ADAPTER_MDA  1
-#define VIDEO_ADAPTER_CGA  2
+/* FDC Clock */
+#define FDC_CLOCK_DIVISOR 14.0
+#define FDC_CLOCK (CYSTRAL_14MHZ / FDC_CLOCK_DIVISOR) /* fdc clock in Hz */
 
-#define ISA_CARD_MDA VIDEO_ADAPTER_MDA
-#define ISA_CARD_CGA VIDEO_ADAPTER_CGA
-#define ISA_CARD_FDC 3
+/* System SW1 (PPI PORT A) */
+#define SW1_DISKS_MASK 0xC0 // SW1 b6,b7 - Number of Floppy Disk drives mask (b6,b7)
+#define SW1_DISKS_1    0x00 // SW1 b6,b7 - 1 drive
+#define SW1_DISKS_2    0x40 // SW1 b6,b7 - 2 drives
+#define SW1_DISKS_3    0x80 // SW1 b6,b7 - 3 drives
+#define SW1_DISKS_4    0xC0 // SW1 b6,b7 - 4 drives
+
+#define SW1_DISPLAY_MASK        0x30 // SW1 b4,b5 - Type of display mask
+#define SW1_DISPLAY_RESERVED    0x00 // SW1 b4,b5 - Display reserved
+#define SW1_DISPLAY_CGA_40X25   0x10 // SW1 b4,b5 - 40x25 Color Graphics display
+#define SW1_DISPLAY_CGA_80X25   0x20 // SW1 b4,b5 - 80x25 Color Graphics display
+#define SW1_DISPLAY_MDA_80X25   0x30 // SW1 b4,b5 - 80x25 Monochrome display
+
+#define SW1_MEMORY_MASK 0x0C // SW1 b2,b3 - Amount of memory mask
+#define SW1_MEMORY_16K  0x00 // SW1 b2,b3 - Amount of memory 16K
+#define SW1_MEMORY_32K  0x04 // SW1 b2,b3 - Amount of memory 32K
+#define SW1_MEMORY_48K  0x08 // SW1 b2,b3 - Amount of memory 48K
+#define SW1_MEMORY_64K  0x0C // SW1 b2,b3 - Amount of memory 64K
+
+#define SW1_HAS_FDC     0x01 // SW1 b1
+#define SW1_HAS_FPU     0x02 // SW1 b2
+
+#define VIDEO_ADAPTER_NONE      0x00
+#define VIDEO_ADAPTER_CGA_40X25 SW1_DISPLAY_CGA_40X25
+#define VIDEO_ADAPTER_CGA_80X25 SW1_DISPLAY_CGA_80X25
+#define VIDEO_ADAPTER_MDA_80X25 SW1_DISPLAY_MDA_80X25
+#define VIDEO_ADAPTER_RESERVED  SW1_DISPLAY_RESERVED
+
+#define MODEL_5150_16_64  0 /* 5150 16-64 KB Motherboard */
+#define MODEL_5150_64_256 1 /* 5150 64-256 KB Motherboard */
+
+#define ISA_BUS_SLOTS 4 /* number of Card Slots on ISA BUS */
 
 static uint64_t const cpu_cycles_per_frame = (uint64_t)CYCLES_PER_FRAME(CPU_CLOCK);
 static uint64_t const pit_cycles_per_frame = (uint64_t)CYCLES_PER_FRAME(PIT_CLOCK);
 static uint64_t const dma_cycles_per_frame = (uint64_t)CYCLES_PER_FRAME(DMA_CLOCK);
+static uint64_t const fdc_cycles_per_frame = (uint64_t)CYCLES_PER_FRAME(FDC_CLOCK);
 
 typedef struct PC_SPEAKER {
 	uint8_t input;
 } PC_SPEAKER;
 
+typedef struct IBM_PC_CONFIG {
+	uint8_t video_adapter;
+	uint8_t fdc_disks;
+	uint8_t sw1_provided;
+	uint8_t sw1;
+	uint8_t sw2_provided;
+	uint8_t sw2;
+	uint8_t model;
+	uint32_t base_memory;
+	uint32_t extended_memory;
+	uint32_t total_memory;
+} IBM_PC_CONFIG;
+
 typedef struct IBM_PC {
 	I8086 cpu;
-	I8086_MNEM* mnem;
-	
-	uint64_t cpu_cycles;
-	uint64_t cpu_extra_cycles;
-	
-	uint64_t pit_accum;
-	uint64_t pit_cycles;
-
-	uint64_t kbd_accum;
-	uint64_t kbd_cycles;
-	
+	I8086_MNEM mnem;
+			
 	MEMORY_MAP mm;
-	ISA_BUS* isa_bus;
+	ISA_BUS isa_bus;
 
 	I8237_DMA dma;
 	I8253_PIT pit;
@@ -90,41 +123,55 @@ typedef struct IBM_PC {
 	FDC fdc;
 	MDA mda;
 	CGA cga;
-	NMI nmi;
-	PC_SPEAKER pc_speaker;
 
 	FRAME_STATE time;
 
-	uint8_t kb_reschedule;     /* keyboard reset */
-	uint8_t kb_do_reset;       /* keyboard reset */
-	uint8_t kb_clock_low;      /* keyboard reset */
-	uint64_t kb_reset_elapsed; /* keyboard reset */
-	uint64_t kb_reset_delay_elapsed; /* keyboard reset */
-
-	uint8_t timer2_gate;       /* timer2 */
-	uint8_t timer2_out;        /* timer2 */
-
-	uint8_t speaker_data;      /* speaker data */
-	uint8_t cassette_data;     /* cassette data */
-	uint8_t cassette_motor;    /* cassette motor */
+	uint64_t cpu_accum;
+	uint64_t cpu_cycles;
 	
-	uint8_t video_adapter;     /* VIDEO_ADAPTER_XXX */
+	uint64_t pit_accum;
+	uint64_t pit_cycles;
+	
+	uint64_t fdc_accum;
+	uint64_t fdc_cycles;
+	
+	uint64_t dma_accum;
+	uint64_t dma_cycles;
+	
+	uint64_t kbd_accum;
+	uint64_t kbd_cycles;
 
-	int cga_card_index;
-	int mda_card_index;
-	int fdc_card_index;
+	KBD kbd;
 
-	uint8_t sw1;
-	uint8_t sw2;
+	NMI nmi;
+	PC_SPEAKER pc_speaker;
 
-	int step;
+	uint8_t timer2_gate;       /* timer2 gate */
+	
+	IBM_PC_CONFIG config;
+
+	int ram_mregion_index;
+
+	uint8_t step;
 } IBM_PC;
 
 extern IBM_PC* ibm_pc;
 
-void ibm_pc_reset();
-int ibm_pc_init();
-void ibm_pc_destroy();
-void ibm_pc_update();
+int ibm_pc_create(void);
+void ibm_pc_destroy(void);
+
+int ibm_pc_init(void);
+void ibm_pc_reset(void);
+void ibm_pc_update(void);
+
+void cal_planar_io_ram_from_total(void);
+void ibm_pc_set_sw1(void);
+void ibm_pc_set_sw2(void);
+
+uint8_t determine_planar_ram_sw(uint20_t planar_ram);
+uint8_t determine_io_ram_sw(uint20_t planar_ram, uint20_t io_ram);
+uint20_t determine_planar_ram_size(uint8_t sw1);
+uint20_t determine_io_ram_size(uint8_t sw1, uint8_t sw2);
+void ibm_pc_set_config(void);
 
 #endif

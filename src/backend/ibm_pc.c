@@ -4,7 +4,6 @@
  */
 
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
 
@@ -22,23 +21,14 @@
 #include "video/mda.h"
 #include "video/cga.h"
 
+#include "isa_cards/mda_isa_card.h"
+#include "isa_cards/cga_isa_card.h"
+
 #include "bit_utils.h"
-#include "timing.h"
-#include "input.h"
 
 #define MEM_SIZE 0x100000
-#define ADDRESS_MASK 0xFFFFF
 
 /* PORTS */
-
-#define MDA_BASE_ADDRESS MDA_IO_BASE_ADDRESS // Base port address of the MDA Card
-#define MDA_MODE   (MDA_BASE_ADDRESS + 0x8)
-#define MDA_STATUS (MDA_BASE_ADDRESS + 0xA)
-
-#define CGA_BASE_ADDRESS CGA_IO_BASE_ADDRESS // Base port address of the MDA Card
-#define CGA_MODE   (CGA_BASE_ADDRESS + 0x8)
-#define CGA_COLOR  (CGA_BASE_ADDRESS + 0x9)
-#define CGA_STATUS (CGA_BASE_ADDRESS + 0xA)
 
 #define NMI_BASE_ADDRESS 0xA0 // Base port address of the NMI Logic Controller
 #define NMI_ENABLE_INT (NMI_BASE_ADDRESS + 0) // Enable/Disable interrupt
@@ -59,60 +49,10 @@
 #define PPI_PORT_C   (PPI_BASE_ADDRESS + 2) // Port C
 #define PPI_CONTROL  (PPI_BASE_ADDRESS + 3) // Control Port
 
-#define FDC_BASE_ADDRESS 0x3F0 // Base port address of the FDC (Floppy Disk Controller)
-#define FDC_STATUS_A        (FDC_BASE_ADDRESS + 0) // (RO)
-#define FDC_STATUS_B        (FDC_BASE_ADDRESS + 1) // (RO)
+#define FDC_BASE_ADDRESS 0x3F0 // Base port address of the FDC
 #define FDC_DIGITAL_OUTPUT  (FDC_BASE_ADDRESS + 2) // (RW)
-#define FDC_TAPE_DRIVE      (FDC_BASE_ADDRESS + 3) // (RW)
 #define FDC_MAIN_STATUS     (FDC_BASE_ADDRESS + 4) // (RO)
-#define FDC_DATARATE_SELECT (FDC_BASE_ADDRESS + 4) // (RW)
 #define FDC_DATA_FIFO       (FDC_BASE_ADDRESS + 5) // (RW)
-#define FDC_DIGITAL_INPUT   (FDC_BASE_ADDRESS + 7) // (RO)
-#define FDC_CONFIG_CONTROL  (FDC_BASE_ADDRESS + 7) // (RW)
-
-/* System SW1 (PPI PORT A) */
-#define SW1_DISKS_MASK 0xC0 // SW1 b6,b7 - Number of Floppy Disk drives mask (b6,b7)
-#define SW1_DISKS_1    0x00 // SW1 b6,b7 - 1 drive
-#define SW1_DISKS_2    0x40 // SW1 b6,b7 - 2 drives
-#define SW1_DISKS_3    0x80 // SW1 b6,b7 - 3 drives
-#define SW1_DISKS_4    0xC0 // SW1 b6,b7 - 4 drives
-
-#define SW1_DISPLAY_MASK        0x30 // SW1 b4,b5 - Type of display mask
-#define SW1_DISPLAY_RESERVED    0x00 // SW1 b4,b5 - Display reserved
-
-#define SW1_DISPLAY_CGA_40X25    0x10 // SW1 b4,b5 - 40x25 Color Graphics display
-#define SW1_DISPLAY_CGA_80X25    0x20 // SW1 b4,b5 - 80x25 Color Graphics display
-#define SW1_DISPLAY_MDA_80X25    0x30 // SW1 b4,b5 - 80x25 Monochrome display
-
-#define SW1_MEMORY_MASK 0x0C // SW1 b2,b3 - Amount of memory mask
-#define SW1_MEMORY_16K  0x00 // SW1 b2,b3 - Amount of memory 16K
-#define SW1_MEMORY_32K  0x04 // SW1 b2,b3 - Amount of memory 32K
-#define SW1_MEMORY_48K  0x08 // SW1 b2,b3 - Amount of memory 48K
-#define SW1_MEMORY_64K  0x0C // SW1 b2,b3 - Amount of memory 64K
-
-#define SW1_HAS_FDC     0x01 // SW1 b1
-
-#define SW2_MEMORY_MASK 0x1F // SW2 b1,b2,b3,b4,b5 - Amount of memory mask
-#define SW2_MEMORY_16K  0x00 // SW2 b1,b2,b3,b4,b5 - Amount of memory 16K
-#define SW2_MEMORY_32K  0x00 // SW2 b1,b2,b3,b4,b5 - Amount of memory 32K
-#define SW2_MEMORY_48K  0x00 // SW2 b1,b2,b3,b4,b5 - Amount of memory 48K
-#define SW2_MEMORY_64K  0x00 // SW2 b1,b2,b3,b4,b5 - Amount of memory 64K
-#define SW2_MEMORY_96K  0x01 // SW2 b1,b2,b3,b4,b5 - Amount of memory 96K
-#define SW2_MEMORY_128K 0x02 // SW2 b1,b2,b3,b4,b5 - Amount of memory 128K
-#define SW2_MEMORY_160K 0x03 // SW2 b1,b2,b3,b4,b5 - Amount of memory 160K
-#define SW2_MEMORY_192K 0x04 // SW2 b1,b2,b3,b4,b5 - Amount of memory 192K
-#define SW2_MEMORY_224K 0x05 // SW2 b1,b2,b3,b4,b5 - Amount of memory 224K
-#define SW2_MEMORY_256K 0x09 // SW2 b1,b2,b3,b4,b5 - Amount of memory 256K
-#define SW2_MEMORY_288K 0x07 // SW2 b1,b2,b3,b4,b5 - Amount of memory 288K
-#define SW2_MEMORY_320K 0x08 // SW2 b1,b2,b3,b4,b5 - Amount of memory 320K
-#define SW2_MEMORY_352K 0x09 // SW2 b1,b2,b3,b4,b5 - Amount of memory 352K
-#define SW2_MEMORY_384K 0x0A // SW2 b1,b2,b3,b4,b5 - Amount of memory 384K
-#define SW2_MEMORY_416K 0x0B // SW2 b1,b2,b3,b4,b5 - Amount of memory 416K
-#define SW2_MEMORY_448K 0x0C // SW2 b1,b2,b3,b4,b5 - Amount of memory 448K
-#define SW2_MEMORY_480K 0x0D // SW2 b1,b2,b3,b4,b5 - Amount of memory 480K
-#define SW2_MEMORY_512K 0x0E // SW2 b1,b2,b3,b4,b5 - Amount of memory 512K
-#define SW2_MEMORY_544K 0x0F // SW2 b1,b2,b3,b4,b5 - Amount of memory 544K
-#define SW2_MEMORY_640K 0x1F // SW2 b1,b2,b3,b4,b5 - Amount of memory 640K
 
 /* PPI Port B */
 #define PORTB_TIMER2_GATE        0x01 // b0 - Turn on timer2; on = 1, off = 0
@@ -125,6 +65,7 @@
 
 #define DBG_PRINT
 #ifdef DBG_PRINT
+#include <stdio.h>
 #define dbg_print(x, ...) printf(x, __VA_ARGS__)
 #else
 #define dbg_print(x, ...)
@@ -152,49 +93,165 @@ enum {
 /* IBM PC global variable */
 IBM_PC* ibm_pc = NULL;
 
-void ibm_pc_change_video_adapter(uint8_t video_adapter) {
-	ibm_pc->video_adapter = video_adapter;
-	switch (video_adapter) {
-		case VIDEO_ADAPTER_MDA:
-			ibm_pc->sw1 = (ibm_pc->sw1 & ~SW1_DISPLAY_MASK) | SW1_DISPLAY_MDA_80X25; /* Set SW1 to MDA 80x25 */
+uint8_t determine_planar_ram_sw(uint20_t planar_ram) {
+	// Convert planar ram amount to sw1
+	uint8_t sw = 0;
+	switch (ibm_pc->config.model) {
+		case MODEL_5150_16_64:
+			sw = (planar_ram >> 12) & 0xFF;
 			break;
-		case VIDEO_ADAPTER_CGA:
-			ibm_pc->sw1 = (ibm_pc->sw1 & ~SW1_DISPLAY_MASK) | SW1_DISPLAY_CGA_80X25; /* Set SW1 to CGA 80x25 */
+		case MODEL_5150_64_256:
+			sw = (planar_ram >> 14) & 0xFF;
 			break;
-		case VIDEO_ADAPTER_NONE:
-			ibm_pc->sw1 = (ibm_pc->sw1 & ~SW1_DISPLAY_MASK);
+	}
+
+	sw -= 4;
+	sw &= 0x0C;
+	return sw;
+}
+uint20_t determine_planar_ram_size(uint8_t sw1) {
+	// Convert sw1 to planar ram amount
+	// FE169 (6025005 AUG81)
+	// FE167 (6322507 APR84)
+	
+	uint20_t planar_ram = 0;
+	planar_ram = sw1;             // in al, PORT_A ; DETERMINE BASE RAM SIZE
+	planar_ram &= 0x0C;           // and al, 0CH   ; ISOLATE RAM SIZE SWS
+	planar_ram += 4;              // add al, 4     ; CALCULATE MEMORY SIZE
+	
+	switch (ibm_pc->config.model) {
+		case MODEL_5150_16_64:
+			planar_ram <<= 12;
 			break;
+		case MODEL_5150_64_256:
+			planar_ram <<= 14;
+			break;
+	}
+	return planar_ram;
+}
+
+uint8_t determine_io_ram_sw(uint20_t planar_ram, uint20_t io_ram) {
+	// Convert io ram amount to sw2
+	uint8_t sw = 0;
+	switch (ibm_pc->config.model) {
+		case MODEL_5150_16_64:
+			sw = (io_ram / 1024 / 32) & 0x1F;
+			break;
+		case MODEL_5150_64_256:
+			if (planar_ram >= 64 * 1024) {
+				planar_ram -= 64 * 1024;
+			}
+			sw = ((io_ram + planar_ram) / 1024 / 32) & 0x1F;
+			break;
+	}
+	return sw;
+}
+uint20_t determine_io_ram_size(uint8_t sw1, uint8_t sw2) {
+	// Convert sw2 to io ram amount
+	uint20_t io_ram = 0;
+	uint20_t planar_ram = 0;
+	switch (ibm_pc->config.model) {
+		case MODEL_5150_16_64:
+			io_ram = (sw2 & 0x1F) * 1024 * 32;
+			break;
+		case MODEL_5150_64_256:
+			planar_ram = determine_planar_ram_size(sw1);
+			if (planar_ram > 64 * 1024) {
+				planar_ram -= 64 * 1024;
+			}
+			else {
+				planar_ram = 0;
+			}
+			io_ram = (sw2 & 0x1F) * 1024 * 32;
+			if (io_ram >= planar_ram) {
+				io_ram -= planar_ram;
+			}
+			break;
+	}
+	return io_ram;
+}
+
+void cal_planar_io_ram_from_total(void) {
+	/* Split total ram into planar ram and io channel ram */
+
+	uint32_t max_planar_memory = 64 * 1024;
+	if (ibm_pc->config.total_memory >= max_planar_memory) {
+		ibm_pc->config.base_memory = max_planar_memory;
+		ibm_pc->config.extended_memory = ibm_pc->config.total_memory - max_planar_memory;
+	}
+	else {
+		ibm_pc->config.base_memory = ibm_pc->config.total_memory;
+		ibm_pc->config.extended_memory = 0;
 	}
 }
 
-static uint16_t determine_base_memory(uint8_t sw) {
-	uint16_t tmp = (uint16_t)sw; // IN AL, PORT_A ; GET SW1 
-	tmp &= SW1_MEMORY_MASK;      // AND AL, 0CH   ; ISOLATE RAM SIZE SWS
-	tmp += 4;                    // ADD AL, 4     ; CALCULATE MEMORY SIZE
-	                      
-	                             // MOV CL, 12 
-	tmp <<= 12;                  // SHL AX, CL
-	return tmp;
+void ibm_pc_set_sw1(void) {
+	/* Set sw1 based on PC Config */
+	if (!ibm_pc->config.sw1_provided) {
+		ibm_pc->config.sw1 = 0;
+		ibm_pc->config.sw1 |= determine_planar_ram_sw(ibm_pc->config.base_memory);
+		ibm_pc->config.sw1 |= ibm_pc->config.video_adapter & SW1_DISPLAY_MASK;
+
+		if (ibm_pc->config.fdc_disks > 0) {
+			ibm_pc->config.sw1 |= SW1_HAS_FDC;
+
+			if (ibm_pc->config.fdc_disks <= 4) {
+				ibm_pc->config.sw1 |= ((ibm_pc->config.fdc_disks - 1) & 0x03) << 6; /* SW1_DISKS_X */
+			}
+		}
+	}
+}
+void ibm_pc_set_sw2(void) {
+	/* Set sw2 based on PC Config */
+	if (!ibm_pc->config.sw2_provided) {
+		ibm_pc->config.sw2 = determine_io_ram_sw(ibm_pc->config.base_memory, ibm_pc->config.extended_memory);
+	}
 }
 
-/* Memory Functions */
+void ibm_pc_set_config(void) {
+	/* Set PC Config based on sw1,sw2  */
+	if (ibm_pc->config.model == MODEL_5150_16_64) {
+		dbg_print("Model: 5150 16-64KB\n");
+	}
+	else if (ibm_pc->config.model == MODEL_5150_64_256) {
+		dbg_print("Model: 5150 64-256KB\n");
+	}
+
+	if (ibm_pc->config.sw1 & SW1_HAS_FDC) {
+		ibm_pc->config.fdc_disks = ((ibm_pc->config.sw1 & SW1_DISKS_MASK) >> 6) + 1;
+	}
+	else {
+		ibm_pc->config.fdc_disks = 0;
+	}
+
+	ibm_pc->config.base_memory = determine_planar_ram_size(ibm_pc->config.sw1);
+	ibm_pc->config.extended_memory = determine_io_ram_size(ibm_pc->config.sw1, ibm_pc->config.sw2);
+	ibm_pc->config.total_memory = ibm_pc->config.base_memory + ibm_pc->config.extended_memory;
+
+	dbg_print("Planar RAM: %u Kb\n", ibm_pc->config.base_memory / 1024);
+	dbg_print("IO RAM:     %u Kb\n", ibm_pc->config.extended_memory / 1024);
+	dbg_print("Total RAM:  %u Kb\n", ibm_pc->config.total_memory / 1024);
+
+	MEMORY_REGION* region = memory_map_get_mregion(&ibm_pc->mm, ibm_pc->ram_mregion_index);
+	region->size = ibm_pc->config.total_memory;
+}
+
+/* I8086 Callbacks */
 uint8_t read_mm_byte(uint20_t addr) {
-	return memory_map_read_byte(&ibm_pc->mm, addr & ADDRESS_MASK);
+	return memory_map_read_byte(&ibm_pc->mm, addr);
 }
 void write_mm_byte(uint20_t addr, uint8_t value) {
-	memory_map_write_byte(&ibm_pc->mm, addr & ADDRESS_MASK, value);
+	memory_map_write_byte(&ibm_pc->mm, addr, value);
 }
-
-/* IO Functions */
 uint8_t read_io_byte(uint16_t port) {
 	
 	uint8_t v = 0;
-	if (isa_bus_read_io_byte(ibm_pc->isa_bus, port, &v)) {
+	if (isa_bus_read_io_byte(&ibm_pc->isa_bus, port, &v)) {
 		return v;
 	}
 
 	switch (port) {
-
+		
 		case 0x00:
 		case 0x01:
 		case 0x02:
@@ -235,6 +292,10 @@ uint8_t read_io_byte(uint16_t port) {
 		case PPI_PORT_C:
 			return i8255_ppi_read_io_byte(&ibm_pc->ppi, port & ~PPI_BASE_ADDRESS);
 		
+		case FDC_MAIN_STATUS:
+		case FDC_DATA_FIFO:
+			return upd765_fdc_read_io_byte(&ibm_pc->fdc, (uint8_t)(port & ~FDC_BASE_ADDRESS));
+
 		case 0x201: // Gamepad
 			return 0x0;
 
@@ -246,7 +307,7 @@ uint8_t read_io_byte(uint16_t port) {
 }
 void write_io_byte(uint16_t port, uint8_t value) {
 	
-	if (isa_bus_write_io_byte(ibm_pc->isa_bus, port, value)) {
+	if (isa_bus_write_io_byte(&ibm_pc->isa_bus, port, value)) {
 		return;
 	}
 
@@ -298,25 +359,22 @@ void write_io_byte(uint16_t port, uint8_t value) {
 			i8255_ppi_write_io_byte(&ibm_pc->ppi, (uint8_t)(port & ~PPI_BASE_ADDRESS), value);
 			break;
 
+		case FDC_DIGITAL_OUTPUT:
+		case FDC_DATA_FIFO:
+			upd765_fdc_write_io_byte(&ibm_pc->fdc, (uint8_t)(port & ~FDC_BASE_ADDRESS), value);
+			break;
+
 		default:
 			dbg_print("write byte to port: %04X = %02X\n", port, value);
 			break;
 	}
 }
 uint16_t read_io_word(uint16_t port) {
-	switch (port) {
-		default:
-			printf("read word from port: %04X\n", port);
-			break;
-	}
-	return 0xFFFF;
+	return (read_io_byte(port) | (read_io_byte(port + 1) << 8));
 }
 void write_io_word(uint16_t port, uint16_t value) {
-	switch (port) {
-		default:
-			printf("write word to port: %04X = %04X\n", port, value);
-			break;
-	}
+	write_io_byte(port, value & 0xFF);
+	write_io_byte(port+1, (value >> 8) & 0xFF);
 }
 
 /* PPI Callbacks */
@@ -324,29 +382,14 @@ uint8_t ppi_port_a_read(I8255_PPI* ppi) {
 	/* Port A (read keyboard input, system sw1) */
 	
 	if (ppi->port_b & PORTB_READ_SW1_KB) {
-		// Read system sw1; suppress IRQ_KBD
-		dbg_print("[PPI] porta read (SW1)\n");
-		return ibm_pc->sw1;
+		return ibm_pc->config.sw1;
 	}
 	else {
-		// Read scan code
-		if (ibm_pc->kb_clock_low) {
-			return 0;
-		}
-		else {
-			dbg_print("[PPI] porta read (kbd) (%04X)\n", ibm_pc->cpu.ip);
-			if (input_has_input()) {
-				uint8_t v = input_get_input();
-				return v;
-			}
-			else {
-				return 0;
-			}
-		}
+		return kbd_get_data(&ibm_pc->kbd);
 	}
 }
 uint8_t ppi_port_b_read(I8255_PPI* ppi) {
-	dbg_print("[PPI] portb read\n");
+	//dbg_print("[PPI] portb read\n");
 	return ppi->port_b;
 }
 void ppi_port_b_write(I8255_PPI* ppi, uint8_t value) {
@@ -376,59 +419,40 @@ void ppi_port_b_write(I8255_PPI* ppi, uint8_t value) {
 		PORTB-b0 0 turn off timer 2
 				 1 turn on timer 2, gate speaker with square wave */
 
-	ibm_pc->timer2_gate    = (value & PORTB_TIMER2_GATE);
-	ibm_pc->speaker_data   = (value & PORTB_SPEAKER_DATA) >> 1;
-	ibm_pc->cassette_data  = (value & PORTB_TIMER2_GATE);
-	ibm_pc->cassette_motor = !((value & PORTB_CASSETTE_MOTOR_OFF) >> 3);
-	ibm_pc->kb_clock_low =   !((value & PORTB_KB_ENABLE) >> 6);
+	ibm_pc->timer2_gate  = (value & PORTB_TIMER2_GATE);
 
 	if (IS_RISING_EDGE(PORTB_KB_ENABLE, ppi->port_b, value)) {
-		dbg_print("[PPI] kbd clk high\n");
-		uint64_t ticks = timing_get_ticks_ms() - ibm_pc->kb_reset_elapsed;
-		if (ticks > 10) {
-			dbg_print("[PPI] kbd reset (%llums)\n", ticks);
-			ibm_pc->kb_do_reset = 1;
-		}
-		ibm_pc->kb_reset_elapsed = 0;
+		kbd_set_clk(&ibm_pc->kbd, 1);
 	}
 	else if (IS_FALLING_EDGE(PORTB_KB_ENABLE, ppi->port_b, value)) {
-		dbg_print("[PPI] kbd clk low\n");
-		ibm_pc->kb_reset_elapsed = timing_get_ticks_ms();
+		kbd_set_clk(&ibm_pc->kbd, 0);
 	}
 
 	if (IS_RISING_EDGE(PORTB_READ_SW1_KB, ppi->port_b, value)) {
-		ibm_pc->kb_reschedule = 1;
+		kbd_set_enable(&ibm_pc->kbd, 0);
 	}
-	else if (IS_FALLING_EDGE(PORTB_READ_SW1_KB, ppi->port_b, value)) {
-		ibm_pc->kb_reschedule = 0;
+	if (IS_FALLING_EDGE(PORTB_READ_SW1_KB, ppi->port_b, value)) {
+		kbd_set_enable(&ibm_pc->kbd, 1);
 	}
 }
 uint8_t ppi_port_c_read(I8255_PPI* ppi) {
 	/* PORT C (device output register, read spare key, system sw2) */
 	
-	uint8_t timer_bit = ibm_pc->pit.timer[2].out << 0x5;
-	
-	uint8_t cassete_bit = 0;
-	if (!ibm_pc->cassette_motor) {
+	if (ppi->port_b & PORTB_CASSETTE_MOTOR_OFF) {
 		// Loopback mode
-		cassete_bit = ibm_pc->cassette_data << 0x4;
-		//uint8_t speaker_loopback = (ibm_pc->speaker_data & ibm_pc->timer2_gate & ibm_pc->pit.timer[2].out);
-		//cassete_bit = speaker_loopback << 0x4;
 	}
 
 	if (ppi->port_b & PORTB_READ_SW2_KEY) {
-		return (ibm_pc->sw2 & 0x0F) | cassete_bit | timer_bit;
+		return (ibm_pc->config.sw2 & 0x0F);
 	}
 	else {
-		return ((ibm_pc->sw2 >> 4) & 0x01) | cassete_bit | timer_bit;
+		return ((ibm_pc->config.sw2 >> 4) & 0x01);
 	}
 }
 
 static void pcspeaker_set(PC_SPEAKER* pc_speaker, uint8_t input) {
 	pc_speaker->input = input;
 }
-
-static void kbd_update();
 
 /* PIT Callbacks */
 static void pit_on_timer0(I8253_TIMER* timer) {
@@ -455,15 +479,11 @@ static void pit_on_timer0(I8253_TIMER* timer) {
 	}
 }
 static void pit_on_timer1(I8253_TIMER* timer) {
-	/* PIT channel 1 is connected to the DRAM refresh circuit. */
 	(void)timer;
-	ibm_pc->ppi.port_b ^= 0x10; // DRAM refresh
-	kbd_update();
 }
 static void pit_on_timer2(I8253_TIMER* timer) {
 	/* PIT channel 2 is connected to the PC Speaker. */
-		
-	ibm_pc->timer2_out = timer->out;
+	
 	switch (timer->ctrl & I8253_PIT_CTRL_MODE) {
 		case I8253_PIT_MODE0: // interrupt on terminal count
 			pcspeaker_set(&ibm_pc->pc_speaker, 0);
@@ -481,162 +501,90 @@ static void pit_on_timer2(I8253_TIMER* timer) {
 	}
 }
 
-/* ISA Card Callbacks */
-static int isa_cga_write_io_byte(CGA* cga, uint16_t port, uint8_t value) {
-	switch (port) {
-		case CGA_BASE_ADDRESS + 0x0: // CGA Index
-		case CGA_BASE_ADDRESS + 0x2: // CGA Index
-		case CGA_BASE_ADDRESS + 0x4: // CGA Index
-		case CGA_BASE_ADDRESS + 0x6: // CGA Index
-		case CGA_BASE_ADDRESS + 0x1: // CGA Data
-		case CGA_BASE_ADDRESS + 0x3: // CGA Data 
-		case CGA_BASE_ADDRESS + 0x5: // CGA Data
-		case CGA_BASE_ADDRESS + 0x7: // CGA Data
-		case CGA_MODE:
-		case CGA_STATUS:
-		case CGA_COLOR:
-			cga_write_io_byte(cga, (uint8_t)(port & ~CGA_BASE_ADDRESS), value);
-			return 1;
-	}
-	return 0;
-}
-static int isa_cga_read_io_byte(CGA* cga, uint16_t port, uint8_t* v) {
-	switch (port) {
-		case CGA_BASE_ADDRESS + 0x0: // CGA Index
-		case CGA_BASE_ADDRESS + 0x2: // CGA Index
-		case CGA_BASE_ADDRESS + 0x4: // CGA Index
-		case CGA_BASE_ADDRESS + 0x6: // CGA Index
-		case CGA_BASE_ADDRESS + 0x1: // CGA Data
-		case CGA_BASE_ADDRESS + 0x3: // CGA Data 
-		case CGA_BASE_ADDRESS + 0x5: // CGA Data
-		case CGA_BASE_ADDRESS + 0x7: // CGA Data
-		case CGA_MODE:
-		case CGA_STATUS:
-			*v = cga_read_io_byte(cga, (uint8_t)(port & ~CGA_BASE_ADDRESS));
-			return 1;
-	}
-	return 0;
-}
-static int isa_mda_write_io_byte(MDA* mda, uint16_t port, uint8_t value) {
-	switch (port) {
-		case MDA_BASE_ADDRESS + 0x0: // MDA Index
-		case MDA_BASE_ADDRESS + 0x2: // MDA Index
-		case MDA_BASE_ADDRESS + 0x4: // MDA Index
-		case MDA_BASE_ADDRESS + 0x6: // MDA Index
-		case MDA_BASE_ADDRESS + 0x1: // MDA Data
-		case MDA_BASE_ADDRESS + 0x3: // MDA Data 
-		case MDA_BASE_ADDRESS + 0x5: // MDA Data
-		case MDA_BASE_ADDRESS + 0x7: // MDA Data
-		case MDA_MODE:
-		case MDA_STATUS:
-			mda_write_io_byte(mda, (uint8_t)(port & ~MDA_BASE_ADDRESS), value);
-			return 1;
-	}
-	return 0;
-}
-static int isa_mda_read_io_byte(MDA* mda, uint16_t port, uint8_t* v) {
-	switch (port) {
-		case MDA_BASE_ADDRESS + 0x0: // MDA Index
-		case MDA_BASE_ADDRESS + 0x2: // MDA Index
-		case MDA_BASE_ADDRESS + 0x4: // MDA Index
-		case MDA_BASE_ADDRESS + 0x6: // MDA Index
-		case MDA_BASE_ADDRESS + 0x1: // MDA Data
-		case MDA_BASE_ADDRESS + 0x3: // MDA Data
-		case MDA_BASE_ADDRESS + 0x5: // MDA Data
-		case MDA_BASE_ADDRESS + 0x7: // MDA Data
-		case MDA_MODE:
-		case MDA_STATUS:
-			*v = mda_read_io_byte(mda, (uint8_t)(port & ~MDA_BASE_ADDRESS));
-			return 1;
-	}
-	return 0;
-}
-static int isa_fdc_write_io_byte(FDC* fdc, uint16_t port, uint8_t value) {
-	switch (port) {
-		
-		case FDC_DIGITAL_OUTPUT:
-		case FDC_TAPE_DRIVE:
-		case FDC_DATARATE_SELECT:
-		case FDC_CONFIG_CONTROL:
-		case FDC_DATA_FIFO:
-			fdc_write_io_byte(fdc, (uint8_t)(port & ~FDC_BASE_ADDRESS), value);
-			return 1;
-	}
-	return 0;
-}
-static int isa_fdc_read_io_byte(FDC* fdc, uint16_t port, uint8_t* v) {
-	switch (port) {
-		case FDC_STATUS_A:
-		case FDC_STATUS_B:
-		case FDC_DIGITAL_OUTPUT:
-		case FDC_TAPE_DRIVE:
-		case FDC_MAIN_STATUS:
-		case FDC_DIGITAL_INPUT:
-		case FDC_DATA_FIFO:
-			*v = fdc_read_io_byte(fdc, (uint8_t)(port & ~FDC_BASE_ADDRESS));
-			return 1;
-	}
-	return 0;
-}
-
 /* FDC Callbacks */
-static void fdc_do_irq(FDC* fdc) {
+static void fdc_request_irq(FDC* fdc) {
 	(void)fdc;
 	i8259_pic_request_interrupt(&ibm_pc->pic, IRQ_FDC);
 }
 
+/* KBD Callbacks */
+static void kbd_request_irq(KBD* kbd) {
+	(void)kbd;
+	i8259_pic_request_interrupt(&ibm_pc->pic, IRQ_KBD);
+}
+static void kbd_clear_irq(KBD* kbd) {
+	(void)kbd;
+	i8259_pic_clear_interrupt(&ibm_pc->pic, IRQ_KBD);
+}
+
+/* DMA Callbacks */
+void dma_write_byte(uint8_t channel, uint8_t value) {
+	i8237_dma_write_byte(&ibm_pc->dma, channel, value);
+}
+uint8_t dma_read_byte(uint8_t channel) {
+	return i8237_dma_read_byte(&ibm_pc->dma, channel);
+}
+
+/* I8086 INTR Callbacks */
+void i8086_assert_intr(uint8_t type) {
+	ibm_pc->cpu.intr = 1;
+	ibm_pc->cpu.intr_type = type;
+}
+void i8086_deassert_intr(void) {
+	ibm_pc->cpu.intr = 0;
+	ibm_pc->cpu.intr_type = 0;
+}
+
 /* Kbd */
-static void kbd_reset_check() {
-	if (ibm_pc->kb_do_reset) {
-		ibm_pc->kb_do_reset = 0;
-		input_reset_input();
-		input_set_input(0xAA);
-		i8259_pic_request_interrupt(&ibm_pc->pic, IRQ_KBD);
+static void kbd_update(void) {
+	const uint64_t cycle_target = 35400;
+	ibm_pc->kbd_accum += ibm_pc->cpu.cycles;
+	while (ibm_pc->kbd_accum >= cycle_target) {
+		ibm_pc->kbd_accum -= cycle_target;
+		ibm_pc->kbd_cycles++;
+		kbd_tick(&ibm_pc->kbd);
 	}
 }
-static void kbd_update() {
+static void dma_update(void) {
+	/* dma cycles are 3/2 of cpu cycles */
+	const uint64_t cycle_target = 2; // CPU cycles
+	const uint64_t cycle_factor = 3; // factor
 
-	kbd_reset_check();
-
-	if (ibm_pc->kb_reschedule) {
-		//ibm_pc->kb_reschedule = 0;
-		//input_reset_input();
-		//i8259_pic_clear_interrupt(&ibm_pc->pic, IRQ_KBD);
-		//printf("reschedule\n");
-		//return;
-	}
-
-	if (!ibm_pc->kb_clock_low) {
-		if (input_has_input()) {
-			i8259_pic_request_interrupt(&ibm_pc->pic, IRQ_KBD);
-		}
+	ibm_pc->dma_accum += ibm_pc->cpu.cycles * cycle_factor;
+	while (ibm_pc->dma_accum >= cycle_target) {
+		ibm_pc->dma_accum -= cycle_target;
+		ibm_pc->dma_cycles++;
+		i8237_dma_update(&ibm_pc->dma);
 	}
 }
+static void fdc_update(void) {
+	/* fdc cycles are 3/14 of cpu cycles */
+	const uint64_t cycle_target = 14; // CPU cycles
+	const uint64_t cycle_factor = 3;  // factor
 
-static void pic_update() {
-	if (ibm_pc->cpu.status.in) {
-		uint8_t type = 0;
-		if (i8259_pic_get_interrupt(&ibm_pc->pic, &type)) {
-#ifdef DBG_PRINT
-			if (type & ~0x8) {
-				dbg_print("[PIC] IRQ %d\n", type);
-			}
-#endif
-			i8086_intr(&ibm_pc->cpu, type);
-		}
+	ibm_pc->fdc_accum += ibm_pc->cpu.cycles * cycle_factor;
+	while (ibm_pc->fdc_accum >= cycle_target) {
+		ibm_pc->fdc_accum -= cycle_target;
+		ibm_pc->fdc_cycles++;
+		upd765_fdc_update(&ibm_pc->fdc);
 	}
 }
-static void pit_update() {
+static void pic_update(void) {
+	i8259_pic_get_interrupt(&ibm_pc->pic);
+}
+static void pit_update(void) {
 	/* pit cycles are 1/4 of cpu cycles */
-	const uint64_t cycle_target = 4UL;
-	ibm_pc->pit_accum += ibm_pc->cpu.cycles;
+	const uint64_t cycle_target = 4; // CPU cycles
+	const uint64_t cycle_factor = 1; // factor
+
+	ibm_pc->pit_accum += ibm_pc->cpu.cycles * cycle_factor;
 	while (ibm_pc->pit_accum >= cycle_target) {
 		ibm_pc->pit_accum -= cycle_target;
 		ibm_pc->pit_cycles++;
 		i8253_pit_update(&ibm_pc->pit);
 	}
 }
-static void cpu_update() {
+static void cpu_update(void) {
 
 	ibm_pc->cpu.cycles = 0;
 	if (i8086_execute(&ibm_pc->cpu) == I8086_DECODE_UNDEFINED) {
@@ -649,32 +597,14 @@ static void cpu_update() {
 	}
 	ibm_pc->cpu_cycles += ibm_pc->cpu.cycles;
 
-#define bios5150_81
-//#define basicc10
-//#define supersoft_diag
-
-#ifdef basicc10
-	/* BASIC C v1.0 */
-	switch ((ibm_pc->cpu.segments[1] << 4) + ibm_pc->cpu.ip) {
-		case 0xFE996: // input char
-			//ibm_pc->step = 1;
-			break;
-
-		case 0xFE9B7:
-			//ibm_pc->step = 1;
-			break;
-	}
-#endif
+//#define bios5150_81
 
 #ifdef bios5150_81
 	/* BIOS_5150_24APR81_U33.BIN */
 	switch ((ibm_pc->cpu.segments[1] << 4) + ibm_pc->cpu.ip) {
-		//case 0xFE01A: // Initial Reliability Tests - phase 1
-		//	dbg_print("stgtest\n");
-		//	break;
 
 		case 0xFE05B: // TEST.01
-			dbg_print("reset\ntest.01\n");
+			dbg_print("test.01\n");
 			break;
 
 		case 0xFE0F9: //
@@ -722,6 +652,31 @@ static void cpu_update() {
 			dbg_print("test.06\n");
 			break;
 
+		case 0xFE250: // TEST.06
+			if (!ibm_pc->cpu.status.zf)
+				dbg_print("test.06 error imr not 0\n");
+			break;
+
+		case 0xFE25A: // TEST.06
+			if (!ibm_pc->cpu.status.zf)
+				dbg_print("test.06 error imr not 0xFF\n");
+			break;
+
+		case 0xFE27B: // TEST.06
+			if (!ibm_pc->cpu.status.zf)
+				dbg_print("test.06 error INT occcured\n");
+			else
+				dbg_print("test.06 passed\n");
+			break;
+
+		case 0xFE270: // TEST.06
+			//ibm_pc->step = 1;
+			break;
+
+		case 0xFE279: // TEST.06
+			//ibm_pc->step = 1;
+			break;
+
 		case 0xFE285: // TEST.07 (timer test)
 			dbg_print("test.07\n");
 			//ibm_pc->cpu.ip = 0xE2B3; // skip test 7; goto test 8.
@@ -735,6 +690,7 @@ static void cpu_update() {
 			if (!ibm_pc->cpu.status.zf)
 				dbg_print("test.07 error timer too fast\n");
 			break;
+
 		case 0xFE2B3: // TEST.07 (passed)
 			dbg_print("test.07 timer speed passed\n");
 			break;
@@ -762,6 +718,11 @@ static void cpu_update() {
 
 		case 0xFE3F8: // TEST.11
 			dbg_print("test.11\n");
+			break;
+
+		case 0xFE42B: // TEST.11
+			dbg_print("test.11 (skip mem test)\n");
+			ibm_pc->cpu.ip = 0xE47A; // skip mem test; goto TEST 12
 			break;
 
 		case 0xFE4C7: // TEST.12
@@ -799,129 +760,77 @@ static void cpu_update() {
 			dbg_print("jmp boot_locn\n");
 			break;
 
-		//case 0xFF2C3:
-		//	dbg_print("INT 2 (NMI_INT)\n");
+		//case 0xFF98D:
+		//	// LOOPE
+		//	if (ibm_pc->cpu.status.zf == 0) {
+		//		dbg_print("cass value changed\n");
+		//	}
+		//	else if (ibm_pc->cpu.registers[REG_CX].r16 == 1) { 
+		//		// cx going to be 0 
+		//		dbg_print("cass value time out\n");
+		//	}
 		//	break;
-		//case 0xFFF54:
-		//	dbg_print("INT 5 (PRINT_SCREEN)\n");
-		//	break;
-		//case 0xFFEA5:
-		//	dbg_print("INT 8 (TIMER_INT)\n");
-		//	break;
-		//case 0xFF987:
-		//	dbg_print("INT 9 (KB_INT)\n");
-		//	break;
-		//case 0xFEF57:
-		//	dbg_print("INT E (DISK_INT)\n");
-		//	break;
-		//case 0xFF065:
-		//	dbg_print("INT 10 (VIDEO_IO)\n");
-		//	break;
-		//case 0xFF1CE:
-		//	dbg_print("INT 10 (VIDEO_IO) iret\n");
-		//	break;
-		case 0xFEC59:
-			dbg_print("INT 13 (DISKETTE_IO) - ");
-			switch (ibm_pc->cpu.registers[REG_AX].h) {
-				case 0:
-					dbg_print("AH=0; reset diskette system\n");
-					break;
-				case 1:
-					dbg_print("AH=1; read sector/s\n");
-					break;
-				default:
-					dbg_print("unknown: AH=%02X\n", ibm_pc->cpu.registers[REG_AX].h);
-					break;
-			}
-			break;
-		case 0xFE82E:
-			dbg_print("INT 16 (KEYBOARD IO)\n");
-			break;
-		case 0xFE6F2:
-			dbg_print("INT 19 (BOOT_STRAP)\n");
-			break;
 
-		case 0xFCE51: //fixed
-			// ERROR: modrm addressing [bp], [bp + si], [bp + di], [bp + disp] does not use segement override correctly
-			//ibm_pc->step = 1;
-			break;
+		//case 0xFE545:
+		//	if (ibm_pc->cpu.registers[REG_CX].r16 == 0) {
+		//		dbg_print("cass err1 (JCXZ)\n");
+		//	}
+		//	break;
 
-		case 0xFF98D:
-			// LOOPE
-			if (ibm_pc->cpu.status.zf == 0) {
-				dbg_print("cass value changed\n");
+		case 0xFF065:
+			dbg_print("INT 10 (VIDEO_IO) ah=%x\n", ibm_pc->cpu.registers[REG_AX].h);
+			break;
+		 
+		//case 0xFE54B:
+		//	if (ibm_pc->cpu.status.cf == 0) {
+		//		dbg_print("cass err2 (JNC)\n");
+		//	}
+		//	break;
+
+		/*case 0xFEE4E:
+			dbg_print("FDC check direction bit (0x40) - ");
+			if (ibm_pc->cpu.status.zf) {
+				dbg_print("OK\n");
 			}
-			else if (ibm_pc->cpu.registers[REG_CX].r16 == 1) { 
-				// cx going to be 0 
-				dbg_print("cass value time out\n");
+			else {
+				dbg_print("ERR\n");
 			}
 			break;
 
-		case 0xFE545:
-			if (ibm_pc->cpu.registers[REG_CX].r16 == 0) {
-				dbg_print("cass err1 (JCXZ)\n");
+		case 0xFEE61:
+			dbg_print("FDC check ready bit (0x80) - ");
+			if (ibm_pc->cpu.status.zf) {
+				dbg_print("ERR\n");
+			}
+			else {
+				dbg_print("OK\n");
 			}
 			break;
 
-		case 0xFE54B:
-			if (ibm_pc->cpu.status.cf == 0) {
-				dbg_print("cass err2 (JNC)\n");
+		case 0xFEF7C:
+			dbg_print("FDC check ready bit (0x80) - ");
+			if (ibm_pc->cpu.status.zf) {
+				dbg_print("ERR\n");
+			}
+			else {
+				dbg_print("OK\n");
 			}
 			break;
 
-		case 0xFF28A:
-			dbg_print("hhhhhhhhh\n");
-			ibm_pc->step = 1;
-			break;
-	}
-#endif
-
-#ifdef supersoft_diag
-	// SUPERSOFT DIAG V1.2
-	switch ((ibm_pc->cpu.segments[1] << 4) + ibm_pc->cpu.ip) {
-		case 0xFF505: // PRINT STR end
-			dbg_print("PRINT STR end\n");
-			//ibm_pc->step = 1;
-			break;
-		
-		case 0xFE825: // U3 CPU REGISTERS AND LOGIC test 1
-			dbg_print("U3 CPU REGISTERS AND LOGIC test 1\n");
-			//ibm_pc->step = 1;
-			break;
-					
-		case 0xFE87E: // U3 CPU REGISTERS AND LOGIC test 2
-			dbg_print("U3 CPU REGISTERS AND LOGIC test 2\n");
-			//ibm_pc->step = 1;
-			break;
-		
-		case 0xFE8A6: // U3 CPU REGISTERS AND LOGIC test 3
-			dbg_print("U3 CPU REGISTERS AND LOGIC test 3\n");
-			//ibm_pc->step = 1;
-			break;
-		
-		case 0xFE8C8: // U3 CPU REGISTERS AND LOGIC test 4
-			dbg_print("U3 CPU REGISTERS AND LOGIC test 4\n");
-			//ibm_pc->step = 1;
-			break;
-		
-		case 0xFEBC1: // Memory Refresh Test long wait loop
-			//dbg_print("Memory Refresh Test Loop\n");
-			ibm_pc->cpu.ip = 0xEBC6; // skip loop
-			break;
-				
-		case 0xFEBD0: // Memory Refresh Test error condition
-			ibm_pc->cpu.ip = 0xEBD8; // force correct condition
-			break;
-				
-		case 0xFEC89: // Interrupt level 0
-			//ibm_pc->step = 1;
-			//ibm_pc->cpu.ip = 0xEBD8; 
-			break;
+		case 0xFEF8D:
+			dbg_print("FDC check direction bit (0x40) - ");
+			if (ibm_pc->cpu.status.zf) {
+				dbg_print("ERR\n");
+			}
+			else {
+				dbg_print("OK\n");
+			}
+			break;*/
 	}
 #endif
 }
 
-void ibm_pc_update() {
+void ibm_pc_update(void) {
 	/* IBM PC Update loop; */
 
 	timing_new_frame(&ibm_pc->time);
@@ -931,44 +840,55 @@ void ibm_pc_update() {
 		if (ibm_pc->step) {
 			if (ibm_pc->step == 2) {
 				ibm_pc->step = 1;
+				isa_bus_update(&ibm_pc->isa_bus, ibm_pc->cpu.cycles);
+				dma_update();
+				fdc_update();
 				pit_update();
+				kbd_update();
 				pic_update();
 				cpu_update();
 			}
 		}
 		else {
-			ibm_pc->cpu_cycles = ibm_pc->cpu_extra_cycles;
+			ibm_pc->cpu_cycles = ibm_pc->cpu_accum;
+			ibm_pc->dma_cycles = 0;
+			ibm_pc->fdc_cycles = 0;
 			ibm_pc->pit_cycles = 0;
 			ibm_pc->kbd_cycles = 0;
 			while (ibm_pc->cpu_cycles < cpu_cycles_per_frame && !ibm_pc->step) {
+				isa_bus_update(&ibm_pc->isa_bus, ibm_pc->cpu.cycles);
+
+				dma_update();
+				fdc_update();
 				pit_update();
+				kbd_update();
 				pic_update();
 				cpu_update();
 			}
 			if (ibm_pc->cpu_cycles >= cpu_cycles_per_frame) {
-				ibm_pc->cpu_extra_cycles = ibm_pc->cpu_cycles - cpu_cycles_per_frame;
+				ibm_pc->cpu_accum = ibm_pc->cpu_cycles - cpu_cycles_per_frame;
 			}
 		}
 	}
 }
 
-void ibm_pc_reset() {
+void ibm_pc_reset(void) {
 	/* IBM PC reset */
 
-	ibm_pc->cassette_motor = 0;
-	ibm_pc->speaker_data = 0;
-
-	ibm_pc->kb_do_reset = 0;
-	ibm_pc->kb_reschedule = 0;
-	ibm_pc->kbd_cycles = 0;
-	ibm_pc->kb_clock_low = 1;
-	ibm_pc->kb_reset_elapsed = timing_get_ticks_ms();
-
 	ibm_pc->cpu_cycles = 0;
-	ibm_pc->cpu_extra_cycles = 0;
+	ibm_pc->cpu_accum = 0;
 
 	ibm_pc->pit_cycles = 0;
 	ibm_pc->pit_accum = 0;
+
+	ibm_pc->fdc_cycles = 0;
+	ibm_pc->fdc_accum = 0;
+
+	ibm_pc->dma_cycles = 0;
+	ibm_pc->dma_accum = 0;
+
+	ibm_pc->kbd_cycles = 0;
+	ibm_pc->kbd_accum = 0;
 
 	timing_reset_frame(&ibm_pc->time);
 
@@ -977,23 +897,23 @@ void ibm_pc_reset() {
 	i8253_pit_reset(&ibm_pc->pit);
 	i8255_ppi_reset(&ibm_pc->ppi);
 	i8259_pic_reset(&ibm_pc->pic);
-	fdc_reset(&ibm_pc->fdc);
-	mda_reset(&ibm_pc->mda);
-	cga_reset(&ibm_pc->cga);
+	upd765_fdc_reset(&ibm_pc->fdc);
+	kbd_reset(&ibm_pc->kbd);
 
-	input_reset_input();
+	isa_bus_reset(&ibm_pc->isa_bus);
 
 	memory_map_set_writeable_region(&ibm_pc->mm, 0);
 }
 
-int ibm_pc_init() {
+int ibm_pc_init(void) {
 	/* IBM PC Initialize */
 
-	ibm_pc = (IBM_PC*)calloc(1, sizeof(IBM_PC));
-	if (ibm_pc == NULL) {
-		dbg_print("Failed to allocate memory for IBM_PC\n");
-		return 1;
-	}
+	/* Calculate planar ram and io ram */
+	cal_planar_io_ram_from_total();
+
+	/* Setup PC Config (system switches sw1, sw2)*/
+	ibm_pc_set_sw1();
+	ibm_pc_set_sw2();
 
 	/* Setup 8086 CPU */
 	i8086_init(&ibm_pc->cpu);
@@ -1004,99 +924,112 @@ int ibm_pc_init() {
 	ibm_pc->cpu.funcs.write_io_byte  = write_io_byte;
 	ibm_pc->cpu.funcs.write_io_word  = write_io_word;
 
-	/* Setup 8086 Mnemonics */
-	ibm_pc->mnem = (I8086_MNEM*)calloc(1, sizeof(I8086_MNEM));
-	if (ibm_pc->mnem == NULL) {
-		dbg_print("Failed to allocate memory for I8086_MNEM\n");
-		return 1;
-	}
-	ibm_pc->mnem->state = &ibm_pc->cpu;
+	/* Setup 8086 Mnemonics */	
+	ibm_pc->mnem.state = &ibm_pc->cpu;
 
-	/* Setup PPI */
+	/* Setup PPI callbacks */
 	ibm_pc->ppi.port_a_read  = ppi_port_a_read;	
 	ibm_pc->ppi.port_b_read  = ppi_port_b_read;
 	ibm_pc->ppi.port_b_write = ppi_port_b_write;
 	ibm_pc->ppi.port_c_read  = ppi_port_c_read;
 
-	/* Setup PIT */
+	/* Setup PIT callbacks */
 	i8253_pit_set_timer_cb(&ibm_pc->pit, 0, pit_on_timer0, NULL);
 	i8253_pit_set_timer_cb(&ibm_pc->pit, 1, pit_on_timer1, NULL);
 	i8253_pit_set_timer_cb(&ibm_pc->pit, 2, pit_on_timer2, &ibm_pc->timer2_gate);
 
-	/* Setup FDC */
-	ibm_pc->fdc.do_irq = fdc_do_irq;
+	/* Setup PIC callbacks */
+	ibm_pc->pic.assert_intr = i8086_assert_intr;
+	ibm_pc->pic.deassert_intr = i8086_deassert_intr;
 
-	/* Setup Memory map */
-	if (create_memory_map(&ibm_pc->mm, MEM_SIZE)) {
-		dbg_print("Failed to create MEMORY_MAP\n");
-		return 1;
-	}
+	/* Setup FDC callbacks */
+	ibm_pc->fdc.do_irq = fdc_request_irq;
+	ibm_pc->fdc.read_mem_byte = read_mm_byte;
+	ibm_pc->fdc.write_mem_byte = write_mm_byte;
+	ibm_pc->fdc.dma_p = &ibm_pc->dma;
 
-	/* Setup Memory Regions */
+	/* Setup KBD callbacks */
+	ibm_pc->kbd.request_irq = kbd_request_irq;
+	ibm_pc->kbd.clear_irq = kbd_clear_irq;
 
-	/* SYSTEM RAM - 0x0000 - 0x10000 (64K) */
-	add_memory_region(&ibm_pc->mm, 0x00000, 640*1024, 0xFFFFFFFF, 0);
+	/* Setup DMA */
+	i8237_dma_init(&ibm_pc->dma);
+	ibm_pc->dma.read_mem_byte = read_mm_byte;
+	ibm_pc->dma.write_mem_byte = write_mm_byte;
 
-	/* BASIC ROM */
-	add_memory_region(&ibm_pc->mm, 0xF6000, 0x8000, 0x7FFF, MREGION_FLAG_WRITE_PROTECTED);
+	/* Setup Memory Map Regions */
 
-	/* IBM BIOS ROM */
-	add_memory_region(&ibm_pc->mm, 0xFE000, 0x2000, 0x1FFF, MREGION_FLAG_WRITE_PROTECTED);
+	/* PLANAR/IO RAM - placeholder; need ram mregion index for ibm_pc_set_config() */
+	ibm_pc->ram_mregion_index = memory_map_add_mregion(&ibm_pc->mm, 0x00000, 16*1024, 0xFFFFF, MREGION_FLAG_NONE);
 
-	/* Setup ISA Bus */
+	/* BIOS ROM - 0xFE000 - 0xFFFFF (0x2000 08K) */
+	memory_map_add_mregion(&ibm_pc->mm, 0xFE000, 0x2000, 0xFFFFF, MREGION_FLAG_WRITE_PROTECTED);
+
+	/* BASIC ROM - 0xF6000 - 0xFDFFF (0x8000 32K) */
+	memory_map_add_mregion(&ibm_pc->mm, 0xF6000, 0x8000, 0xFFFFF, MREGION_FLAG_WRITE_PROTECTED);
 	
-	if (isa_bus_create(&ibm_pc->isa_bus, &ibm_pc->mm)) {
-		dbg_print("Failed to create ISA_BUS\n");
-		return 1;
-	}
+	/* EXPANSION ROM - 0xC0000 - 0xF5FFF (0x36000 216K) */
+	memory_map_add_mregion(&ibm_pc->mm, 0xC0000, 0x36000, 0xFFFFF, MREGION_FLAG_WRITE_PROTECTED);
 
-	/* MDA Card */
-	ibm_pc->mda_card_index = isa_bus_create_card(ibm_pc->isa_bus, 0, "MDA");
-	/* MDA VIDEO RAM - B0000 - B0FFF (0x1000 4K) mirrored up to 0xB7FFF (x8)*/
-	isa_card_add_memory_region(ibm_pc->isa_bus, ibm_pc->mda_card_index, MDA_MM_BASE_ADDRESS, 0x8000, MDA_MM_ADDRESS_MASK, 0);
-	isa_card_add_io(ibm_pc->isa_bus, ibm_pc->mda_card_index, isa_mda_write_io_byte, isa_mda_read_io_byte, &ibm_pc->mda);
-	isa_bus_enable_card(ibm_pc->isa_bus, ibm_pc->mda_card_index);
+	/* Setup ISA Bus, ISA Cards */
 
-	/* CGA Card */
-	ibm_pc->cga_card_index = isa_bus_create_card(ibm_pc->isa_bus, 0, "CGA");
-	/* CGA VIDEO RAM - B8000 - BBFFF (0x4000 16K) mirrored up to 0xBFFFF (x2)*/
-	isa_card_add_memory_region(ibm_pc->isa_bus, ibm_pc->cga_card_index, CGA_MM_BASE_ADDRESS, 0x8000, CGA_MM_ADDRESS_MASK, 0);
-	isa_card_add_io(ibm_pc->isa_bus, ibm_pc->cga_card_index, isa_cga_write_io_byte, isa_cga_read_io_byte, &ibm_pc->cga);
-	isa_bus_enable_card(ibm_pc->isa_bus, ibm_pc->cga_card_index);
+	/* For now; just add both cga, mda cards to the bus. */
 
-	/* FDC Card */
-	ibm_pc->fdc_card_index = isa_bus_create_card(ibm_pc->isa_bus, 0, "FDC");
-	//isa_card_add_memory_region(ibm_pc->isa_bus, ibm_pc->fdc_card_index, FDC_MM_BASE_ADDRESS, 0x8000, FDC_MM_ADDRESS_MASK, 0);
-	isa_card_add_io(ibm_pc->isa_bus, ibm_pc->fdc_card_index, isa_fdc_write_io_byte, isa_fdc_read_io_byte, &ibm_pc->fdc);
-	isa_bus_enable_card(ibm_pc->isa_bus, ibm_pc->fdc_card_index);
+	/* MDA Card; VIDEO RAM - B0000 - B0FFF (0x1000 04K) mirrored up to 0xB7FFF (0x8000 32K) x8 */
+	isa_card_add_mda(&ibm_pc->isa_bus, &ibm_pc->mda);
 
-	/* Set system switches (sw1, sw2) */
-	//ibm_pc->sw1 = SW1_HAS_FDC | SW1_DISKS_1 | SW1_MEMORY_64K;
-	ibm_pc->sw1 = SW1_MEMORY_64K;
-	ibm_pc->sw2 = SW2_MEMORY_64K;
+	/* CGA Card; VIDEO RAM - B8000 - BBFFF (0x4000 16K) mirrored up to 0xBFFFF (0x8000 32K) x2 */
+	isa_card_add_cga(&ibm_pc->isa_bus, &ibm_pc->cga);
 
-	uint20_t base_memory = determine_base_memory(ibm_pc->sw1);
-	dbg_print("Base Memory: %d Kb\n", base_memory / 1024);
+	/* After all mregions are set; validate the memory map */
+	memory_map_validate(&ibm_pc->mm);
+	
+	ibm_pc_set_config();
 
-	/* setup timing; we base all timing off 60 HZ */
-	ibm_pc->time.target_ms = HZ_TO_MS(FRAME_RATE_HZ);
+	/* Setup timing; we base all timing off 60 HZ */
+	timing_init_frame(&ibm_pc->time, HZ_TO_MS(FRAME_RATE_HZ));
 
 	return 0; /* success */
 }
 
-void ibm_pc_destroy() {
+int ibm_pc_create(void) {
+	/* IBM PC Create */
+
+	ibm_pc = calloc(1, sizeof(IBM_PC));
+	if (ibm_pc == NULL) {
+		dbg_print("Failed to allocate memory for IBM_PC\n");
+		return 1;
+	}
+
+	/* Create Memory Map; 6 MRegions */
+	if (memory_map_create(&ibm_pc->mm, MEM_SIZE, 6)) {
+		return 1; /* memory_map_create() reports errors to console */
+	}
+	
+	/* Create ISA Bus; 4 ISA Card slots */
+	if (isa_bus_create(&ibm_pc->isa_bus, &ibm_pc->mm, ISA_BUS_SLOTS)) {
+		return 1; /* isa_bus_create() reports errors to console */
+	}
+
+	/* Create fdc */
+	if (upd765_fdc_create(&ibm_pc->fdc)) {
+		return 1; /* upd765_fdc_create() reports errors to console */
+	}
+
+	return 0; /* success */
+}
+void ibm_pc_destroy(void) {
 	/* IBM PC Destroy */
 	if (ibm_pc != NULL) {
 
-		/* Free memory map */
-		destroy_memory_map(&ibm_pc->mm);
+		/* Destroy fdc */
+		upd765_fdc_destroy(&ibm_pc->fdc);
 
-		if (ibm_pc->isa_bus != NULL) {
-			isa_bus_destroy(ibm_pc->isa_bus);
-			ibm_pc->isa_bus = NULL;
-		}
+		/* Destroy isa bus */
+		isa_bus_destroy(&ibm_pc->isa_bus);
 
-		fdc_remove_disks(&ibm_pc->fdc);
+		/* Destroy memory map */
+		memory_map_destroy(&ibm_pc->mm);
 
 		free(ibm_pc);
 		ibm_pc = NULL;
