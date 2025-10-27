@@ -11,31 +11,47 @@
 #include "memory_map.h"
 
 /* ISA Card has no flags */
-#define ISA_CARD_FLAG_NONE    0x00
+#define ISA_CARD_FLAG_NONE       0x00
 
 /* ISA Card has IO (port mapped IO) */
-#define ISA_CARD_FLAG_HAS_IO  0x01
+#define ISA_CARD_FLAG_HAS_IO     0x01
 
 /* ISA Card has memory region (ram, rom) */
-#define ISA_CARD_FLAG_HAS_MM  0x02
+#define ISA_CARD_FLAG_HAS_MM     0x02
+
+/* ISA Card has reset func */
+#define ISA_CARD_FLAG_HAS_RESET  0x04
+
+/* ISA Card has update func */
+#define ISA_CARD_FLAG_HAS_UPDATE 0x08
 
 /* ISA Card is enabled */
-#define ISA_CARD_FLAG_ENABLED 0x04
+#define ISA_CARD_FLAG_ENABLED    0x10
 
 /* ISA Card has been removed; A new ISA Card can overwrite this card */
-#define ISA_CARD_FLAG_REMOVED 0x08
+#define ISA_CARD_FLAG_REMOVED    0x20
 
-/* ISA Bus Write IO 
+/* ISA Bus Write Card IO 
+	param: the parameter to pass to function 
 	port:  the IO port address 
 	value: the value written to the port
 	Return: 1 if ISA Card has handled the write. 0 if not */
 typedef int(*ISA_BUS_WRITE_IO)(void* param, uint16_t port, uint8_t value);
 
-/* ISA Bus Read IO 
+/* ISA Bus Read Card IO
+	param: the parameter to pass to function 
 	port:  the IO port address 
 	ptr:   the value read from the port
 	Return: 1 if ISA Card has handled the read. 0 if not */
 typedef int(*ISA_BUS_READ_IO)(void* param, uint16_t port, uint8_t* ptr);
+
+/* ISA Bus Reset Card 
+	param: the parameter to pass to function */
+typedef void(*ISA_BUS_RESET)(void* param);
+
+/* ISA Bus Update Card 
+	param: the parameter to pass to function */
+typedef void(*ISA_BUS_UPDATE)(void* param, uint64_t cycles);
 
 /* ISA Card */
 typedef struct ISA_CARD {
@@ -43,7 +59,9 @@ typedef struct ISA_CARD {
 	uint32_t flags;                 /* flags for the isa card. ISA_CARD_FLAG_XXX */
 	ISA_BUS_WRITE_IO write_io_byte; /* write io byte. used if the isa card has io mapped (HAS_IO) */
 	ISA_BUS_READ_IO read_io_byte;   /* read io byte. used if the isa card has io mapped (HAS_IO) */
-	void* param;                    /* param passed to read/write io funcs. used if the isa card has io mapped (HAS_IO) */
+	ISA_BUS_RESET reset;            /* reset. used if the isa card has reset mapped (HAS_RESET) */
+	ISA_BUS_UPDATE update;          /* update. used if the isa card has update mapped (HAS_UPDATE) */
+	void* param;                    /* user param */
 	char* name;
 } ISA_CARD;
 
@@ -72,6 +90,24 @@ void isa_bus_destroy(ISA_BUS* bus);
    Returns: -1 if error or the index of the added card on success */
 int isa_bus_add_card(ISA_BUS* bus, const char* name);
 
+/* ISA Bus Read port mapped io
+	port:   the IO port address
+	value   the value read from the port
+	Return: 1 if a ISA Card has handled the read. 0 if not */
+int isa_bus_read_io_byte(ISA_BUS* bus, uint16_t port, uint8_t* value);
+
+/* ISA Bus Write port mapped io
+	port:   the IO port address
+	value:  the value write to the port
+	Return: 1 if a ISA Card has handled the write. 0 if not */
+int isa_bus_write_io_byte(ISA_BUS* bus, uint16_t port, uint8_t value);
+
+/* ISA Bus reset; Call reset on all ISA Cards */
+void isa_bus_reset(ISA_BUS* bus);
+
+/* ISA Bus reset; Call reset on all ISA Cards */
+void isa_bus_update(ISA_BUS* bus, uint64_t cycles);
+
 /* Remove an ISA Card from the bus
    bus:     the isa bus instance
    index:   the isa card index
@@ -95,7 +131,7 @@ int isa_bus_enable_card(ISA_BUS* bus, int index);
    Returns: 1 if error or 0 on success */
 int isa_bus_disable_card(ISA_BUS* bus, int index);
 
-/* Add a memory region to an ISA CARD
+/* Add a memory region to an ISA Card
    bus:     the isa bus instance
    index:   the isa card index
    start:   the region start
@@ -105,37 +141,63 @@ int isa_bus_disable_card(ISA_BUS* bus, int index);
    Returns: 1 if error or 0 on success */
 int isa_card_add_mm(ISA_BUS* bus, int index, uint32_t start, uint32_t size, uint32_t mask, uint32_t flags);
 
-/* Remove mregon from an ISA Card on the bus
+/* Remove mregon from an ISA Card
    bus:     the isa bus instance
    index:   the isa card index
    Returns: 1 if error or 0 on success */
 int isa_card_remove_mm(ISA_BUS* bus, int index);
 
-/* Add port mapped io to an ISA CARD
+/* Add port mapped io to an ISA Card
    bus:           the isa bus instance
    index:         the isa card index
    write_io_byte: write io byte function
    read_io_byte:  read io byte function
-   param:         the param to pass to the write and read functions.
    Returns:       1 if error or 0 on success */
-int isa_card_add_io(ISA_BUS* bus, int index, ISA_BUS_WRITE_IO write_io_byte, ISA_BUS_READ_IO read_io_byte, void* param);
+int isa_card_add_io(ISA_BUS* bus, int index, ISA_BUS_WRITE_IO write_io_byte, ISA_BUS_READ_IO read_io_byte);
 
-/* Remove io from an ISA Card on the bus
+/* Remove io from an ISA Card
    bus:     the isa bus instance
    index:   the isa card index
    Returns: 1 if error or 0 on success */
 int isa_card_remove_io(ISA_BUS* bus, int index);
 
-/* ISA Bus Read port mapped io
-	port:   the IO port address
-	value   the value read from the port
-	Return: 1 if a ISA Card has handled the read. 0 if not */
-int isa_bus_read_io_byte(ISA_BUS* bus, uint16_t port, uint8_t* value);
+/* Add reset to an ISA Card
+   bus:           the isa bus instance
+   index:         the isa card index
+   reset:         reset function
+   Returns:       1 if error or 0 on success */
+int isa_card_add_reset(ISA_BUS* bus, int index, ISA_BUS_RESET reset);
 
-/* ISA Bus Write port mapped io
-	port:   the IO port address
-	value:  the value write to the port
-	Return: 1 if a ISA Card has handled the write. 0 if not */
-int isa_bus_write_io_byte(ISA_BUS* bus, uint16_t port, uint8_t value);
+/* Remove reset from an ISA Card
+   bus:     the isa bus instance
+   index:   the isa card index
+   Returns: 1 if error or 0 on success */
+int isa_card_remove_reset(ISA_BUS* bus, int index);
+
+/* Add Update to an ISA Card
+   bus:           the isa bus instance
+   index:         the isa card index
+   update:        update function
+   Returns:       1 if error or 0 on success */
+int isa_card_add_update(ISA_BUS* bus, int index, ISA_BUS_UPDATE update);
+
+/* Remove update from an ISA Card
+   bus:     the isa bus instance
+   index:   the isa card index
+   Returns: 1 if error or 0 on success */
+int isa_card_remove_update(ISA_BUS* bus, int index);
+
+/* Add param to an ISA Card
+   bus:     the isa bus instance
+   index:   the isa card index
+   param:   the user param to pass to io/reset funcs
+   Returns: 1 if error or 0 on success */
+int isa_card_add_param(ISA_BUS* bus, int index, void* param);
+
+/* Remove param from an ISA Card
+   bus:     the isa bus instance
+   index:   the isa card index
+   Returns: 1 if error or 0 on success */
+int isa_card_remove_param(ISA_BUS* bus, int index);
 
 #endif

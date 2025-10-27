@@ -26,6 +26,8 @@
 #define IS_ACTIVE(i)   (!IS_REMOVED(i) && IS_ENABLED(i))
 #define HAS_IO(i)      (bus->cards[i].flags & ISA_CARD_FLAG_HAS_IO)
 #define HAS_MM(i)      (bus->cards[i].flags & ISA_CARD_FLAG_HAS_MM)
+#define HAS_RESET(i)   (bus->cards[i].flags & ISA_CARD_FLAG_HAS_RESET)
+#define HAS_UPDATE(i)  (bus->cards[i].flags & ISA_CARD_FLAG_HAS_UPDATE)
 #define IS_IN_RANGE(i) ((i) != -1 && (i) < bus->card_index)
 
 int isa_bus_create(ISA_BUS* bus, MEMORY_MAP* map, int slots) {
@@ -56,11 +58,9 @@ void isa_bus_destroy(ISA_BUS* bus) {
 	if (bus != NULL) {		
 		if (bus->cards != NULL) {
 			for (int i = 0; i < bus->card_count; ++i) {
-				bus->cards[i].mregion_index = -1;
-				bus->cards[i].flags = 0;
-				bus->cards[i].write_io_byte = NULL;
-				bus->cards[i].read_io_byte = NULL;
-				bus->cards[i].param = NULL;
+
+				isa_bus_remove_card(bus, i);
+
 				if (bus->cards[i].name != NULL) {
 					free(bus->cards[i].name);
 					bus->cards[i].name = NULL;
@@ -117,13 +117,11 @@ int isa_bus_remove_card(ISA_BUS* bus, int index) {
 			isa_card_remove_mm(bus, index);
 		}
 
-		if (HAS_IO(index)) {
-			isa_card_remove_io(bus, index);
-		}
-
 		bus->cards[index].mregion_index = -1;
 		bus->cards[index].write_io_byte = NULL;
 		bus->cards[index].read_io_byte = NULL;
+		bus->cards[index].reset = NULL;
+		bus->cards[index].update = NULL;
 		bus->cards[index].param = NULL;
 		bus->cards[index].flags = ISA_CARD_FLAG_REMOVED;
 		bus->cards[index].name[0] = '\0';
@@ -188,6 +186,22 @@ int isa_bus_write_io_byte(ISA_BUS* bus, uint16_t port, uint8_t value) {
 	return 0; /* Write not handled */
 }
 
+void isa_bus_reset(ISA_BUS* bus) {
+	for (int i = 0; i < bus->card_index; ++i) {
+		if (!IS_REMOVED(i) && IS_ENABLED(i) && HAS_RESET(i)) {
+			bus->cards[i].reset(bus->cards[i].param);
+		}
+	}
+}
+
+void isa_bus_update(ISA_BUS* bus, uint64_t cycles) {
+	for (int i = 0; i < bus->card_index; ++i) {
+		if (!IS_REMOVED(i) && IS_ENABLED(i) && HAS_UPDATE(i)) {
+			bus->cards[i].update(bus->cards[i].param, cycles);
+		}
+	}
+}
+
 int isa_card_add_mm(ISA_BUS* bus, int index, uint32_t start, uint32_t size, uint32_t mask, uint32_t flags) {
 	if (IS_IN_RANGE(index) && !IS_REMOVED(index)) {
 		bus->cards[index].flags |= ISA_CARD_FLAG_HAS_MM;
@@ -211,12 +225,11 @@ int isa_card_remove_mm(ISA_BUS* bus, int index) {
 	return 1;
 }
 
-int isa_card_add_io(ISA_BUS* bus, int index, ISA_BUS_WRITE_IO write_io_byte, ISA_BUS_READ_IO read_io_byte, void* param) {
+int isa_card_add_io(ISA_BUS* bus, int index, ISA_BUS_WRITE_IO write_io_byte, ISA_BUS_READ_IO read_io_byte) {
 	if (IS_IN_RANGE(index) && !IS_REMOVED(index)) {
 		bus->cards[index].flags |= ISA_CARD_FLAG_HAS_IO;
 		bus->cards[index].write_io_byte = write_io_byte;
 		bus->cards[index].read_io_byte = read_io_byte;
-		bus->cards[index].param = param;
 		return 0;
 	}
 	dbg_print("Failed to add IO to isa card; Index out of range or card removed. index = %d, removed = %d\n", index, IS_REMOVED(index));
@@ -227,9 +240,63 @@ int isa_card_remove_io(ISA_BUS* bus, int index) {
 		bus->cards[index].flags &= ~ISA_CARD_FLAG_HAS_IO;
 		bus->cards[index].write_io_byte = NULL;
 		bus->cards[index].read_io_byte = NULL;
-		bus->cards[index].param = NULL;
 		return 0;
 	}
 	dbg_print("Failed to remove IO from isa card; Index out of range or card removed. index = %d, removed = %d\n", index, IS_REMOVED(index));
+	return 1;
+}
+
+int isa_card_add_reset(ISA_BUS* bus, int index, ISA_BUS_RESET reset) {
+	if (IS_IN_RANGE(index) && !IS_REMOVED(index)) {
+		bus->cards[index].flags |= ISA_CARD_FLAG_HAS_RESET;
+		bus->cards[index].reset = reset;
+		return 0;
+	}
+	dbg_print("Failed to add RESET to isa card; Index out of range or card removed. index = %d, removed = %d\n", index, IS_REMOVED(index));
+	return 1;
+}
+int isa_card_remove_reset(ISA_BUS* bus, int index) {
+	if (IS_IN_RANGE(index) && !IS_REMOVED(index)) {
+		bus->cards[index].flags &= ~ISA_CARD_FLAG_HAS_RESET;
+		bus->cards[index].reset = NULL;
+		return 0;
+	}
+	dbg_print("Failed to remove RESET from isa card; Index out of range or card removed. index = %d, removed = %d\n", index, IS_REMOVED(index));
+	return 1;
+}
+
+int isa_card_add_update(ISA_BUS* bus, int index, ISA_BUS_UPDATE update) {
+	if (IS_IN_RANGE(index) && !IS_REMOVED(index)) {
+		bus->cards[index].flags |= ISA_CARD_FLAG_HAS_UPDATE;
+		bus->cards[index].update = update;
+		return 0;
+	}
+	dbg_print("Failed to add UPDATE to isa card; Index out of range or card removed. index = %d, removed = %d\n", index, IS_REMOVED(index));
+	return 1;
+}
+int isa_card_remove_update(ISA_BUS* bus, int index) {
+	if (IS_IN_RANGE(index) && !IS_REMOVED(index)) {
+		bus->cards[index].flags &= ~ISA_CARD_FLAG_HAS_UPDATE;
+		bus->cards[index].update = NULL;
+		return 0;
+	}
+	dbg_print("Failed to remove UPDATE from isa card; Index out of range or card removed. index = %d, removed = %d\n", index, IS_REMOVED(index));
+	return 1;
+}
+
+int isa_card_add_param(ISA_BUS* bus, int index, void* param) {
+	if (IS_IN_RANGE(index) && !IS_REMOVED(index)) {
+		bus->cards[index].param = param;
+		return 0;
+	}
+	dbg_print("Failed to add PARAM to isa card; Index out of range or card removed. index = %d, removed = %d\n", index, IS_REMOVED(index));
+	return 1;
+}
+int isa_card_remove_param(ISA_BUS* bus, int index) {
+	if (IS_IN_RANGE(index) && !IS_REMOVED(index)) {
+		bus->cards[index].param = NULL;
+		return 0;
+	}
+	dbg_print("Failed to remove PARAM from isa card; Index out of range or card removed. index = %d, removed = %d\n", index, IS_REMOVED(index));
 	return 1;
 }
