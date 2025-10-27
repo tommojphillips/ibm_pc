@@ -100,6 +100,10 @@ void window_instance_set_transform(WINDOW_INSTANCE* instance, int32_t x, int32_t
 /* Set Window Instance Min Size. Window must be open. */
 void window_instance_set_min_size(WINDOW_INSTANCE* instance, int32_t w, int32_t h);
 
+int window_instance_is_full_screen(WINDOW_INSTANCE* instance);
+void window_instance_set_full_screen(WINDOW_INSTANCE* instance, int fullscreen);
+void window_instance_toggle_full_screen(WINDOW_INSTANCE* instance);
+
 int window_instance_set_cb_on_process_event(WINDOW_INSTANCE* instance, WINDOW_INSTANCE_CB cb);
 int window_instance_set_cb_on_render(WINDOW_INSTANCE* instance, WINDOW_INSTANCE_CB cb, void* cb_param);
 

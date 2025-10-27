@@ -245,6 +245,27 @@ void window_instance_set_min_size(WINDOW_INSTANCE* instance, int32_t w, int32_t 
 	}
 }
 
+int window_instance_is_full_screen(WINDOW_INSTANCE* instance) {
+	return (instance->window_state & WINDOW_INSTANCE_STATE_FULL_SCREEN);
+}
+void window_instance_set_full_screen(WINDOW_INSTANCE* instance, int fullscreen) {
+	int fs = instance->window_state & WINDOW_INSTANCE_STATE_FULL_SCREEN;
+	if (fs != fullscreen) {
+		if (fullscreen == 0) {
+			instance->window_state &= ~WINDOW_INSTANCE_STATE_FULL_SCREEN;
+		}
+		else {
+			instance->window_state |= WINDOW_INSTANCE_STATE_FULL_SCREEN;
+		}
+		SDL_SetWindowFullscreen(instance->window, fullscreen);
+	}
+}
+void window_instance_toggle_full_screen(WINDOW_INSTANCE* instance) {
+	instance->window_state ^= WINDOW_INSTANCE_STATE_FULL_SCREEN;
+	int fullscreen = instance->window_state & WINDOW_INSTANCE_STATE_FULL_SCREEN;
+	SDL_SetWindowFullscreen(instance->window, fullscreen);
+}
+
 int window_instance_set_cb_on_process_event(WINDOW_INSTANCE* instance, WINDOW_INSTANCE_CB cb) {
 	if (instance != NULL) {
 
