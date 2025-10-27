@@ -17,6 +17,7 @@
 #include "frontend/sdl/sdl3_input.h"
 #include "frontend/sdl/sdl3_display.h"
 #include "frontend/sdl/dbg_gui.h"
+#include "frontend/sdl/sdl3_ui.h"
 
 #include "backend/ibm_pc.h"
 #include "backend/timing.h"
@@ -408,7 +409,7 @@ int parse_args(ARGS* args, int argc, char** argv) {
 #define gui_boarder_w_l 15 /* boarder width left */
 #define gui_boarder_w_t 25 /* boarder width top */
 
-void ibm_pc_change_video_adapter(uint8_t video_adapter);
+#include "ui.h"
 
 int main(int argc, char** argv) {
 	
@@ -416,6 +417,14 @@ int main(int argc, char** argv) {
 	if (sdl_create()) {
 		exit(1);
 	}
+
+	/* Create Window Manager */
+	if (window_manager_create(2)) {
+		exit(1);
+	}
+
+	sdl_add_cb_on_process_event(window_manager_process_event);
+	sdl_add_cb_on_update(window_manager_update);
 
 	/* Create IBM PC */
 	if (ibm_pc_init()) {
@@ -429,12 +438,8 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 		
-	/* Create Window Manager */
-	if (window_manager_create(2)) {
-		exit(1);
-	}
-
 	WINDOW_INSTANCE* win1 = NULL;
+	DISPLAY_INSTANCE* display = NULL;
 	if (args.video_adapter != VIDEO_ADAPTER_NONE) {
 		/* Create Main Window */
 		if (window_instance_create(&win1)) {
@@ -444,6 +449,16 @@ int main(int argc, char** argv) {
 		window_instance_set_transform(win1, dbg_gui_w + gui_boarder_w_l, SDL_WINDOWPOS_CENTERED, 800, 550);
 		window_instance_set_cb_on_process_event(win1, input_process_event);
 		window_instance_open(win1);		
+
+		/* create display */
+		if (display_create(&display, win1)) {
+			exit(1);
+		}
+		display_on_video_adapter_changed(display, args.video_adapter);
+
+		ui_create_renderer(win1->window, win1->renderer);
+		window_instance_set_cb_on_render(win1, ui_update, display);
+		window_instance_set_cb_on_process_event(win1, ui_process_event);
 	}
 
 	if (args.dbg_ui) {
@@ -461,16 +476,6 @@ int main(int argc, char** argv) {
 		window_instance_set_cb_on_render(win2, dbg_gui_render, &dbg_gui);
 		window_instance_open(win2);
 	}
-
-	/* create display */
-	DISPLAY_INSTANCE* display = NULL;
-	if (display_create(&display, win1)) {
-		exit(1);
-	}
-
-	/* change to selected video adapter */
-	ibm_pc_change_video_adapter(args.video_adapter);
-	display_on_video_adapter_changed(display, args.video_adapter);
 
 	/* Setup timing callbacks for backend */
 	timing_set_cb_get_ticks_ms(sdl_timing_get_ticks_ms);
@@ -498,8 +503,10 @@ int main(int argc, char** argv) {
 	}
 
 	/* Clean up */
-	ibm_pc_destroy();
+	ui_destroy();
 	display_destroy(display);
+	ibm_pc_destroy();
+	window_manager_destroy();
 	sdl_destroy();
 
 	return 0;
