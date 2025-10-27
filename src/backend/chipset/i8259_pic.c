@@ -140,20 +140,6 @@ static void ocw2(I8259_PIC* pic, uint8_t value) {
 			dbg_print("[PIC] cmd not implemented: OCW2 = %02X", value);
 			break;
 	}
-
-	/* do we need this? i8259_pic_get_interrupt(I8259_PIC* pic) gets called anyway and would handled this */
-#if 0
-	/* Only reassert INTR if there's a valid pending IRQ */
-	if (eoi) {
-		uint8_t irq = get_pending_irq(pic);
-		if (irq != 0xFF) {
-			assert_intr(pic, irq);
-		}
-		else {
-			pic->deassert_intr();
-		}
-	}
-#endif
 }
 static void ocw3(I8259_PIC* pic, uint8_t ocw3) {
 	/* OCW3 */
@@ -249,41 +235,6 @@ int i8259_pic_get_interrupt(I8259_PIC* pic) {
 	if (!pic->initialized) {
 		return 0; /* No pending interrupt */
 	}
-
-#if 0
-		/* Determine highest-priority ISR */
-		uint8_t highest_isr = highest_priority_bit(pic->isr);
-
-		/* Service highest-priority IR */
-		for (uint8_t irq = 0; irq < 8; ++irq) {
-			uint8_t mask = (1 << irq);
-
-			if (((pic->irr & mask) & ~pic->imr) & ~pic->isr) {
-
-				/* In Edge Triggered mode; */
-				if (!(pic->icw[0] & ICW1_LTIM)) {
-					/* Allow only if higher priority than current ISR */
-					if (highest_isr != 0xFF && irq >= highest_isr && irq != highest_isr) {
-						dbg_print("[PIC] Delayed IRQ %d (<%d)\n", irq, highest_isr);
-						break;
-					}
-
-					/* Clear IRR */
-					pic->irr &= ~mask;
-				}
-
-				/* In Manual EOI mode; */
-				if (!(pic->icw[3] & ICW4_AEOI)) {
-					/* Set ISR */
-					pic->isr |= mask;
-				}
-
-				/* Assert INTR; */
-				assert_intr(pic, irq);
-				return 1;
-			}
-		}
-#endif
 
 	/* Find next valid IRQ to service */
 	uint8_t irq = get_pending_irq(pic);
