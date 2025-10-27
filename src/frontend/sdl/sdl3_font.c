@@ -4,7 +4,6 @@
  */
 
 #include <stdint.h>
-#include <stdio.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -13,6 +12,7 @@
 
 #define DBG_PRINT
 #ifdef DBG_PRINT
+#include <stdio.h>
 #define dbg_print(x, ...) printf(x, __VA_ARGS__)
 #else
 #define dbg_print(x, ...)
@@ -20,80 +20,56 @@
 
  /* Font texture map */
 
-int font_create_textures(SDL_Renderer* renderer, TTF_TextEngine* engine, int w, int h, FONT_TEXTURE_DATA* font) {
-	int result = 0;
-	TTF_Text* text = NULL;
-	SDL_Surface* surface = NULL;
-	char str[2] = { 0, '\0' };
+int font_create_textures(SDL_Renderer* renderer, TTF_TextEngine* engine, FONT_TEXTURE_DATA* font) {
 
 	if (font == NULL) {
 		dbg_print("Error: Failed to create text texture. Font map is NULL\n");
-		result = 1;
-		goto cleanup;
+		return 1;
 	}
 
 	if (engine == NULL) {
-		dbg_print("Error: Failed to create text texture. Text Engine is NULL\n");
-		result = 1;
-		goto cleanup;
+		dbg_print("Error: Failed to create text texture. Text engine is NULL\n");
+		return 1;
 	}
 
 	if (font->ttf == NULL) {
 		dbg_print("Error: Failed to create text texture. Font not loaded\n");
-		result = 1;
-		goto cleanup;
-	}
-
-	surface = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_ARGB32);
-	if (surface == NULL) {
-		dbg_print("Error: Failed to create text texture. Could not create sdl surface. SDL_Err: %s\n", SDL_GetError());
-		result = 1;
-		goto cleanup;
+		return 1;
 	}
 
 	for (int i = 0; i < 256; ++i) {
-		str[0] = (char)i;
-
-		Uint32 color = 0x00000000;
-		SDL_FillSurfaceRect(surface, NULL, color);
-
-		text = TTF_CreateText(engine, font->ttf, &str[0], 25);
-		if (text == NULL) {
-			dbg_print("Error: Failed to create text texture. Could not create ttf text. SDL_Err: %s\n", SDL_GetError());
-			result = 1;
-			goto cleanup;
-		}
-		TTF_SetTextColor(text, 0xFF, 0xFF, 0xFF, 0xFF);
-		if (!TTF_DrawSurfaceText(text, 0, 0, surface)) {
-			dbg_print("Error: Failed to create text texture. Could not draw text on surface. SDL_Err: %s\n", SDL_GetError());
-			result = 1;
-			goto cleanup;
+				
+		SDL_Color white = { 255, 255, 255, 255 };
+		SDL_Surface* glyph = TTF_RenderGlyph_Blended(font->ttf, i, white);
+		if (glyph == NULL) {
+			dbg_print("Error: Failed to create text texture. Could not render glyph. SDL_Err: %s\n", SDL_GetError());
+			return 1;
 		}
 
-		font->textures[i] = SDL_CreateTextureFromSurface(renderer, surface);
+		font->textures[i] = SDL_CreateTextureFromSurface(renderer, glyph);
+
+		SDL_DestroySurface(glyph);
+		glyph = NULL;
+		
 		if (font->textures[i] == NULL) {
 			dbg_print("Error: Failed to create text texture. Could not create text texture from surface. SDL_Err: %s\n", SDL_GetError());
-			result = 1;
-			goto cleanup;
+			return 1;
 		}
-
-		TTF_DestroyText(text);
-		text = NULL;
+		
+		if (!SDL_SetTextureBlendMode(font->textures[i], SDL_BLENDMODE_BLEND)) {
+			dbg_print("Error: Failed to create text texture. Could not set blend mode. SDL_Err: %s\n", SDL_GetError());
+			return 1;
+		}
+		
+		if (!SDL_SetTextureScaleMode(font->textures[i], SDL_SCALEMODE_NEAREST)) {
+			dbg_print("Error: Failed to create text texture. Could not set scale mode. SDL_Err: %s\n", SDL_GetError());
+			return 1;
+		}
 	}
 
-cleanup:
-
-	if (text != NULL) {
-		TTF_DestroyText(text);
-		text = NULL;
-	}
-	if (surface != NULL) {
-		SDL_DestroySurface(surface);
-		surface = NULL;
-	}
-
-	return result;
+	return 0;
 }
+
 void font_destroy_textures(FONT_TEXTURE_DATA* font) {
 	if (font != NULL) {
 		for (int i = 0; i < 256; ++i) {
@@ -106,7 +82,7 @@ void font_destroy_textures(FONT_TEXTURE_DATA* font) {
 }
 
 int font_create_map(FONT_TEXTURE_DATA** font) {
-	*font = (FONT_TEXTURE_DATA*)calloc(1, sizeof(FONT_TEXTURE_DATA));
+	*font = calloc(1, sizeof(FONT_TEXTURE_DATA));
 	if (*font == NULL) {
 		dbg_print("Failed to allocate font map\n");
 		return 1;
@@ -139,13 +115,8 @@ int font_open_font(FONT_TEXTURE_DATA* font, const char* font_file) {
 }
 void font_destroy_map(FONT_TEXTURE_DATA* font) {
 	if (font != NULL) {
+		font_close_font(font);
 		font_destroy_textures(font);
-
-		if (font->ttf != NULL) {
-			TTF_CloseFont(font->ttf);
-			font->ttf = NULL;
-		}
-
 		free(font);
 	}
 }
