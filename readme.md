@@ -29,7 +29,7 @@ The project is built in Visual Studio 2022
  1. Clone the repo and submodules
   
   ```
-  git clone --recurse-submodules https://github.com/tommojphillips/ibm-pc.git
+  git clone --recurse-submodules https://github.com/tommojphillips/ibm_pc.git
   ```
  2. Download SDL3 VC package from their github repo [`SDL3-devel-X.X.X-VC.zip`](https://github.com/libsdl-org/SDL/releases/download/release-3.2.24/SDL3-devel-3.2.24-VC.zip) (direct download link)
      - Extract and copy the `include` and `lib` folders into `ibm_pc/lib/SDL3` you will have to create the `SDL3` directory.
