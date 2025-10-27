@@ -10,11 +10,11 @@
 #define ICW1_REQ_ICW4 0x01
 #define ICW1_SNGL     0x02
 #define ICW1_ADI      0x04
-#define ICW1_LTIM     0x08 /* Edge/Level mode; 0 = edge, 1 = level */
+#define ICW1_LTIM     0x08 /* Edge/Level mode; 0 = Edge, 1 = Level */
 #define ICW1_INIT     0x10
 
 #define ICW4_8088     0x01 /* 8088/8080 mode */
-#define ICW4_AEOI     0x02 /* Auto EOI mode; 1 = AEOI */
+#define ICW4_AEOI     0x02 /* Auto EOI mode; 0 = Manual, 1 = Auto */
 #define ICW4_BUFFERED 0x08 /* Buffered mode */
 #define ICW4_NESTED   0x10 /* Fully nested mode */
 
@@ -30,7 +30,7 @@
 #define OCW3_READ_IRR  0x02
 #define OCW3_READ_ISR  0x03
 
-#define DBG_PRINT
+//#define DBG_PRINT
 #ifdef DBG_PRINT
 #include <stdio.h>
 #define dbg_print(x, ...) printf(x, __VA_ARGS__)
@@ -38,8 +38,32 @@
 #define dbg_print(x, ...)
 #endif
 
+static uint8_t highest_priority_bit(uint8_t byte) {
+	for (uint8_t i = 0; i < 8; ++i) {
+		if (byte & (1 << i)) {
+			return i; /* lowest number = highest priority */
+		}
+	}
+	return 0xFF; /* NONE */
+}
+
+static uint8_t get_pending_irq(I8259_PIC* pic) {
+	uint8_t ir = pic->irr & ~pic->imr & ~pic->isr;
+	if (ir != 0) {
+		return highest_priority_bit(ir);
+	}
+	return 0xFF; /* NONE */
+}
+
+static void assert_intr(I8259_PIC* pic, uint8_t irq) {
+	uint8_t type = pic->icw[1] | irq;
+	pic->assert_intr(type);
+	dbg_print("[PIC] IRQ %d\n", irq);
+}
+
 static void icw1(I8259_PIC* pic, uint8_t value) {
 	/* ICW1 intiitalization */
+	pic->deassert_intr();
 	i8259_pic_reset(pic);
 	pic->icw[pic->icw_index++] = value;
 	dbg_print("[PIC] ICW1 = %02X\n", value);
@@ -52,7 +76,8 @@ static void icwx(I8259_PIC* pic, uint8_t value) {
 	switch (pic->icw_index) {
 
 		case 1: /* ICW2 */
-			pic->icw[pic->icw_index++] = value;
+			/* Mask ICW2 to the top 5 bits */
+			pic->icw[pic->icw_index++] = value & 0xF8;
 
 			/* If in single mode; skip ICW3 */
 			if (pic->icw[0] & ICW1_SNGL) {
@@ -92,28 +117,43 @@ static void ocw1(I8259_PIC* pic, uint8_t value) {
 }
 static void ocw2(I8259_PIC* pic, uint8_t value) {
 	/* OCW2 */
+	uint8_t eoi = 0;
 	switch (value & OCW2_OP_MASK) {
 		case OCW2_EOI: {
 			/* Clear highest priority IR */
-			for (uint8_t i = 0; i < 8; ++i) {
-				if (pic->isr & (1 << i)) {
-					pic->isr &= ~(1 << i);
-					break;
-				}
+			eoi = 1;
+			uint8_t ir = highest_priority_bit(pic->isr);
+			if (ir != 0xFF) {
+				pic->isr &= ~(1 << ir);
 			}
-			//dbg_print("[PIC] EOI\n");
+			dbg_print("[PIC] EOI %d\n", ir);
 		} break;
 
 		case OCW2_EOI_SPEC: {
 			/* Clear specific IR */
+			eoi = 1;
 			pic->isr &= ~(1 << (value & 0x07));
-			//dbg_print("[PIC] EOI_SPEC\n");
+			dbg_print("[PIC] EOI_SPEC %d\n", (value & 0x7));
 		} break;
 
 		default:
 			dbg_print("[PIC] cmd not implemented: OCW2 = %02X", value);
 			break;
 	}
+
+	/* do we need this? i8259_pic_get_interrupt(I8259_PIC* pic) gets called anyway and would handled this */
+#if 0
+	/* Only reassert INTR if there's a valid pending IRQ */
+	if (eoi) {
+		uint8_t irq = get_pending_irq(pic);
+		if (irq != 0xFF) {
+			assert_intr(pic, irq);
+		}
+		else {
+			pic->deassert_intr();
+		}
+	}
+#endif
 }
 static void ocw3(I8259_PIC* pic, uint8_t ocw3) {
 	/* OCW3 */
@@ -180,45 +220,93 @@ void i8259_pic_write_io_byte(I8259_PIC* pic, uint8_t io_address, uint8_t value) 
 
 void i8259_pic_clear_interrupt(I8259_PIC* pic, uint8_t irq) {
 	if (pic->initialized) {
-		uint8_t ir = (1 << (irq & 0x7));
-		pic->irr &= ~ir;
+		uint8_t mask = (1 << (irq & 0x07));
+		pic->irr &= ~mask;
+		pic->isr &= ~mask;
+
+		/* Determine highest-priority active ISR */
+		uint8_t highest_isr = highest_priority_bit(pic->isr);
+
+		/* Deassert INTR if IR is in service and IR has highest priority */
+		if ((irq & 0x07) == highest_isr) {
+			pic->deassert_intr();
+			dbg_print("[PIC] Deasserted INTR (%d)\n", irq);
+		}
 	}
 }
 
 void i8259_pic_request_interrupt(I8259_PIC* pic, uint8_t irq) {
 	if (pic->initialized) {
-		pic->irr |= (1 << irq) & ~pic->imr;
+		/* Only set if not masked and not already in service */
+		uint8_t mask = 1 << (irq & 0x07);
+		if (!(pic->isr & mask) && !(pic->irr & mask) && !(pic->imr & mask)) {
+			pic->irr |= mask;
+		}
 	}
 }
 
-int i8259_pic_get_interrupt(I8259_PIC* pic, uint8_t* type) {
-	if (pic->initialized) {
-		/* get IR if not masked and isnt already in service. */
-		uint8_t ir = (pic->irr & ~pic->imr) & ~pic->isr;
-		/* Service highest priority IR */
-		for (uint8_t i = 0; i < 8; ++i) {
-			if ((ir >> i) & 1) {
+int i8259_pic_get_interrupt(I8259_PIC* pic) {
+	if (!pic->initialized) {
+		return 0; /* No pending interrupt */
+	}
 
-				/* In edge triggered mode; clear IRR */
+#if 0
+		/* Determine highest-priority ISR */
+		uint8_t highest_isr = highest_priority_bit(pic->isr);
+
+		/* Service highest-priority IR */
+		for (uint8_t irq = 0; irq < 8; ++irq) {
+			uint8_t mask = (1 << irq);
+
+			if (((pic->irr & mask) & ~pic->imr) & ~pic->isr) {
+
+				/* In Edge Triggered mode; */
 				if (!(pic->icw[0] & ICW1_LTIM)) {
-					pic->irr &= ~(1 << i);
+					/* Allow only if higher priority than current ISR */
+					if (highest_isr != 0xFF && irq >= highest_isr && irq != highest_isr) {
+						dbg_print("[PIC] Delayed IRQ %d (<%d)\n", irq, highest_isr);
+						break;
+					}
+
+					/* Clear IRR */
+					pic->irr &= ~mask;
 				}
 
-				/* Set ISR */
-				pic->isr |= (1 << i);
-
-				/* In Auto EOI mode; clear ISR */
-				if (pic->icw[3] & ICW4_AEOI) {
-					pic->isr &= (1 << i);
+				/* In Manual EOI mode; */
+				if (!(pic->icw[3] & ICW4_AEOI)) {
+					/* Set ISR */
+					pic->isr |= mask;
 				}
 
-				/* Set INT type; mask ICW2 to the top 5 bits. */
-				*type = (pic->icw[1] & 0xF8) | i;
+				/* Assert INTR; */
+				assert_intr(pic, irq);
 				return 1;
 			}
 		}
+#endif
+
+	/* Find next valid IRQ to service */
+	uint8_t irq = get_pending_irq(pic);
+	if (irq == 0xFF) {
+		return 0; /* No pending interrupt */
 	}
-	return 0;
+
+	uint8_t mask = 1 << irq;
+
+	/* Move the bit from IRR to ISR if not in Auto-EOI mode */
+	if (!(pic->icw[3] & ICW4_AEOI)) { 
+		pic->isr |= mask;
+	}
+
+	/* Clear IRR if in Edge-Triggered mode */
+	if (!(pic->icw[0] & ICW1_LTIM)) {
+		pic->irr &= ~mask;
+	}
+
+	/* Assert INTR */
+	assert_intr(pic, irq);
+	dbg_print("[PIC] IRQ %d -> INTR asserted\n", irq);
+	return 1;
 }
 
 void i8259_pic_reset(I8259_PIC* pic) {
