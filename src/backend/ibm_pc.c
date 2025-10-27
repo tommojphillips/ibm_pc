@@ -31,8 +31,6 @@
 
 /* PORTS */
 
-#define DMA_BASE_ADDRESS 0x00 // Base port address of the DMA Controller
-
 #define MDA_BASE_ADDRESS MDA_IO_BASE_ADDRESS // Base port address of the MDA Card
 #define MDA_MODE   (MDA_BASE_ADDRESS + 0x8)
 #define MDA_STATUS (MDA_BASE_ADDRESS + 0xA)
@@ -197,23 +195,27 @@ uint8_t read_io_byte(uint16_t port) {
 
 	switch (port) {
 
-		case DMA_BASE_ADDRESS + 0x0:
-		case DMA_BASE_ADDRESS + 0x1:
-		case DMA_BASE_ADDRESS + 0x2:
-		case DMA_BASE_ADDRESS + 0x3:
-		case DMA_BASE_ADDRESS + 0x4:
-		case DMA_BASE_ADDRESS + 0x5:
-		case DMA_BASE_ADDRESS + 0x6:
-		case DMA_BASE_ADDRESS + 0x7:
-		case DMA_BASE_ADDRESS + 0x8:
-		case DMA_BASE_ADDRESS + 0x9:
-		case DMA_BASE_ADDRESS + 0xA:
-		case DMA_BASE_ADDRESS + 0xB:
-		case DMA_BASE_ADDRESS + 0xC:
-		case DMA_BASE_ADDRESS + 0xD:
-		case DMA_BASE_ADDRESS + 0xE:
-		case DMA_BASE_ADDRESS + 0xF:
-			return i8237_dma_read_io_byte(&ibm_pc->dma, port & ~DMA_BASE_ADDRESS);
+		case 0x00:
+		case 0x01:
+		case 0x02:
+		case 0x03:
+		case 0x04:
+		case 0x05:
+		case 0x06:
+		case 0x07:
+		case 0x08:
+		case 0x09:
+		case 0x0A:
+		case 0x0B:
+		case 0x0C:
+		case 0x0D:
+		case 0x0E:
+		case 0x0F:
+		case 0x81:
+		case 0x82:
+		case 0x83:
+		case 0x87:
+			return i8237_dma_read_io_byte(&ibm_pc->dma, (uint8_t)(port & 0xFF));
 
 		case NMI_ENABLE_INT:
 			return nmi_read_io_byte(&ibm_pc->nmi, (uint8_t)(port & ~NMI_BASE_ADDRESS));
@@ -250,23 +252,27 @@ void write_io_byte(uint16_t port, uint8_t value) {
 
 	switch (port) {
 		
-		case DMA_BASE_ADDRESS + 0x0:
-		case DMA_BASE_ADDRESS + 0x1:
-		case DMA_BASE_ADDRESS + 0x2:
-		case DMA_BASE_ADDRESS + 0x3:
-		case DMA_BASE_ADDRESS + 0x4:
-		case DMA_BASE_ADDRESS + 0x5:
-		case DMA_BASE_ADDRESS + 0x6:
-		case DMA_BASE_ADDRESS + 0x7:
-		case DMA_BASE_ADDRESS + 0x8:
-		case DMA_BASE_ADDRESS + 0x9:
-		case DMA_BASE_ADDRESS + 0xA:
-		case DMA_BASE_ADDRESS + 0xB:
-		case DMA_BASE_ADDRESS + 0xC:
-		case DMA_BASE_ADDRESS + 0xD:
-		case DMA_BASE_ADDRESS + 0xE:
-		case DMA_BASE_ADDRESS + 0xF:
-			i8237_dma_write_io_byte(&ibm_pc->dma, (uint8_t)(port & ~DMA_BASE_ADDRESS), value);
+		case 0x00:
+		case 0x01:
+		case 0x02:
+		case 0x03:
+		case 0x04:
+		case 0x05:
+		case 0x06:
+		case 0x07:
+		case 0x08:
+		case 0x09:
+		case 0x0A:
+		case 0x0B:
+		case 0x0C:
+		case 0x0D:
+		case 0x0E:
+		case 0x0F:
+		case 0x81:
+		case 0x82:
+		case 0x83:
+		case 0x87:
+			i8237_dma_write_io_byte(&ibm_pc->dma, (uint8_t)(port & 0xFF), value);
 			break;
 
 		case NMI_ENABLE_INT:
