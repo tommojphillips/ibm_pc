@@ -32,6 +32,9 @@
     <Filter Include="frontend\utility">
       <UniqueIdentifier>{167f8ddf-49d1-475d-ac24-3cb2ca487cc6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="backend\isa_cards">
+      <UniqueIdentifier>{0d4f8aae-ede2-4734-8051-00c5062b6756}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\backend\chipset\i8237_dma.c">
@@ -107,9 +110,6 @@
     <ClCompile Include="..\src\backend\input.c">
       <Filter>backend</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\backend\fdd\upd765.c">
-      <Filter>backend\fdd</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\backend\fdd\lba.c">
       <Filter>backend\fdd</Filter>
     </ClCompile>
@@ -127,6 +127,24 @@
     </ClCompile>
     <ClCompile Include="..\lib\i8086\src\i8086_muldiv.c">
       <Filter>backend\I8086</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\fdd\fdd.c">
+      <Filter>backend\fdd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\sdl\sdl3_ui.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\frontend\sdl\sdl3_keys.c">
+      <Filter>frontend\sdl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\keyboard.c">
+      <Filter>backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\isa_cards\cga_isa_card.c">
+      <Filter>backend\isa_cards</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\isa_cards\mda_isa_card.c">
+      <Filter>backend\isa_cards</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -211,9 +229,6 @@
     <ClInclude Include="..\src\backend\input.h">
       <Filter>backend</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\backend\fdd\upd765.h">
-      <Filter>backend\fdd</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\backend\fdd\lba.h">
       <Filter>backend\fdd</Filter>
     </ClInclude>
@@ -231,6 +246,21 @@
     </ClInclude>
     <ClInclude Include="..\lib\i8086\src\i8086_muldiv.h">
       <Filter>backend\I8086</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\fdd\fdd.h">
+      <Filter>backend\fdd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\frontend\sdl\sdl3_ui.h">
+      <Filter>frontend\sdl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\keyboard.h">
+      <Filter>backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\isa_cards\cga_isa_card.h">
+      <Filter>backend\isa_cards</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\isa_cards\mda_isa_card.h">
+      <Filter>backend\isa_cards</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
