@@ -9,11 +9,12 @@
 #include <stdint.h>
 
 #define HZ_TO_MS(x) (1000.0 / (x))
-#define MS_TO_HZ(x) ((x) * 1000.0)
+#define MS_TO_HZ(x) (1000.0 / (x))
 
 /* Frame State */
 typedef struct FRAME_STATE {
 	uint64_t start_frame_time; /* start time of current frame in ms. */
+	uint64_t freq;             /* counter freq */
 	double ms;                 /* current frame time in ms. */
 	double last_ms;            /* last frame time in ms. */
 	double target_ms;          /* target frame time in ms. */

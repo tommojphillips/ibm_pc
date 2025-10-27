@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#include "../../backend/timing.h"
+#include "backend/timing.h"
 
 typedef int TIMER_ID;
 typedef uint32_t(*TIMER_CALLBACK_MS)(void* params, TIMER_ID id, uint32_t interval);
