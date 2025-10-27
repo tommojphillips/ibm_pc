@@ -107,6 +107,7 @@ int font_open_font(FONT_TEXTURE_DATA* font, const char* font_file) {
 	font->ttf = TTF_OpenFont(font_file, 25);
 	if (font->ttf == NULL) {
 		dbg_print("Error: Failed to open font. SDL_Err: %s\n", SDL_GetError());
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Failed to open font", SDL_GetError(), NULL);
 		return 1;
 	}
 
