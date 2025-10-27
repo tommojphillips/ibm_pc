@@ -101,10 +101,7 @@ void dbg_gui_render(WINDOW_INSTANCE* instance, DBG_GUI* gui) {
 	avg_frame_timer_add(&gui->emu_avg_fps, ibm_pc->time.last_ms);
 
 	// print cpu/pit info	
-	
-	sprintf(gui->str, "CGA %6llu cycles", ibm_pc->cga_cycles);
-	SDL_RenderDebugText(instance->renderer, 10.0f, instance->transform.h - 80.0f, gui->str);
-	
+		
 	sprintf(gui->str, "KBD %6llu cycles", ibm_pc->kbd_cycles);
 	SDL_RenderDebugText(instance->renderer, 10.0f, instance->transform.h - 70.0f, gui->str);
 	

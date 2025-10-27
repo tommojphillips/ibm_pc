@@ -54,6 +54,9 @@ void cga_reset(CGA* cga) {
 	cga->color = 0;
 	cga->status = 0;
 	cga->blink = 0;
+	cga->accum = 0;
+	cga->hcount = 0;
+	cga->vcount = 0;
 }
 uint8_t cga_read_io_byte(CGA* cga, uint8_t io_address) {
 	switch (io_address) {
@@ -101,7 +104,7 @@ void cga_write_io_byte(CGA* cga, uint8_t io_address, uint8_t value) {
 #define V_VISIBLE   200   // visible lines per frame
 #define V_TOTAL     262   // total lines per frame including vertical retrace
 
-void cga_tick(CGA* cga) {
+void cga_update(CGA* cga) {
 	cga->hcount++;
 	if (cga->hcount >= H_TOTAL) {
 		cga->hcount -= H_TOTAL;  // wrap horizontal

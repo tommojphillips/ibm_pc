@@ -121,6 +121,7 @@ typedef struct CGA {
 	uint16_t height;        /* display output height */
 	uint16_t hcount;        /* horizontal pixel position */
 	uint16_t vcount;        /* vertical line position */
+	uint64_t accum;         /* cycle accum */
 } CGA;
 
 /* hard reset CGA */
@@ -132,6 +133,7 @@ uint8_t cga_read_io_byte(CGA* cga, uint8_t io_address);
 /* CGA Write IO */
 void cga_write_io_byte(CGA* cga, uint8_t io_address, uint8_t value);
 
-void cga_tick(CGA* cga);
+/* CGA Update */
+void cga_update(CGA* cga);
 
 #endif
