@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)..\bin</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PATH=%PATH%;..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LocalDebuggerEnvironment>
+    <LocalDebuggerCommandArguments>-o0xF6000 5150cb10_1.bin 5150cb10_2.bin 5150cb10_3.bin 5150cb10_4.bin 5150bios.bin -vMDA -dbg</LocalDebuggerCommandArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)..\bin</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PATH=%PATH%;..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LocalDebuggerEnvironment>
+    <LocalDebuggerCommandArguments>-o0xF6000 5150cb10_1.bin 5150cb10_2.bin 5150cb10_3.bin 5150cb10_4.bin 5150bios.bin -vCGA</LocalDebuggerCommandArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)..\bin</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PATH=%PATH%;..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64;</LocalDebuggerEnvironment>
+    <LocalDebuggerCommandArguments>-o 0xF6000 5150cb10_1.bin 5150cb10_2.bin 5150cb10_3.bin 5150cb10_4.bin 5150bios.bin -o 0xFE000 BIOS_IBM5150_27OCT82.BIN -v CGA -dbg -ram 640 -d "B:msdos4_working5.img" -d "A:msdos4_startup.img"  -sw1 0b10100010 -sw2 0b11101101 -model 5150_64_256</LocalDebuggerCommandArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)..\bin</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PATH=%PATH%;..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64;</LocalDebuggerEnvironment>
+    <LocalDebuggerCommandArguments>-o 0xF6000 5150cb10_1.bin 5150cb10_2.bin 5150cb10_3.bin 5150cb10_4.bin 5150bios.bin -o 0xFE000 BIOS_IBM5150_27OCT82.BIN -v CGA -dbg -ram 640 -d "B:msdos4_working5.img" -d "A:msdos4_startup.img"  -sw1 0b10010010 -sw2 0b11101101</LocalDebuggerCommandArguments>
+  </PropertyGroup>
+</Project>
