@@ -73,28 +73,28 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3-3.2.10\include;..\lib\SDL3_ttf-3.2.2\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
     <OutDir>..\bin\x86\$(Configuration)\</OutDir>
     <IntDir>obj\x86\$(Configuration)\</IntDir>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3-3.2.10\lib\x86;..\lib\SDL3_ttf-3.2.2\lib\x86;..\lib\UI\bin\x86</LibraryPath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3-3.2.10\include;..\lib\SDL3_ttf-3.2.2\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
     <OutDir>..\bin\x86\$(Configuration)\</OutDir>
     <IntDir>obj\x86\$(Configuration)\</IntDir>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3-3.2.10\lib\x86;..\lib\SDL3_ttf-3.2.2\lib\x86;..\lib\UI\bin\x86</LibraryPath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3-3.2.10\include;..\lib\SDL3_ttf-3.2.2\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
     <IntDir>obj\x64\$(Configuration)\</IntDir>
     <OutDir>..\bin\x64\$(Configuration)\</OutDir>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3-3.2.10\lib\x64;..\lib\SDL3_ttf-3.2.2\lib\x64;..\lib\UI\bin\x64</LibraryPath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3-3.2.10\include;..\lib\SDL3_ttf-3.2.2\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
     <IntDir>obj\x64\$(Configuration)\</IntDir>
     <OutDir>..\bin\x64\$(Configuration)\</OutDir>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3-3.2.10\lib\x64;..\lib\SDL3_ttf-3.2.2\lib\x64;..\lib\UI\bin\x64</LibraryPath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
