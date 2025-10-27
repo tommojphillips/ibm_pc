@@ -1,3 +1,6 @@
 [submodule "lib/i8086"]
 	path = lib/i8086
 	url = https://github.com/tommojphillips/i8086
+[submodule "lib/UI/lib/imgui"]
+	path = lib/UI/lib/imgui
+	url = https://github.com/ocornut/imgui.git
