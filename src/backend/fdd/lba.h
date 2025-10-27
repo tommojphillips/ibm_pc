@@ -8,28 +8,30 @@
 
 #include <stdint.h>
 
-/* Cylinder-Head-Sector */
+/* CHS struct */
 typedef struct CHS {
-	uint16_t cylinder;
-	uint16_t head;
-	uint16_t sector;
+	uint8_t c; /* Cylinder */
+	uint8_t h;  /* Head */
+	uint8_t s;  /* Sector */
 } CHS;
 
 /* Logical Block Addressing */
 typedef uint32_t LBA;
 
-/* LBA to CHS 
- hpc: (in)  max heads per cylinder
- spt: (in)  max sectors per track
- lba: (in)  lba
- chs: (out) cylinder-head-sector */
-void lba_to_chs(const uint16_t hpc, const uint16_t spt, const LBA lba, CHS* chs);
+/* LBA to CHS
+ disk_descriptor: (in) Disk descriptor
+ lba:             (in)  LBA
+ Returns: the CHS struct */
+CHS lba_to_chs(const CHS disk_descriptor, const LBA lba);
 
-/* CHS to LBA 
- hpc: (in)  max heads per cylinder
- spt: (in)  max sectors per track
- chs: (in)  cylinder-head-sector
- lba: (out) lba */
-void chs_to_lba(const uint16_t hpc, const uint16_t spt, const CHS* chs, LBA* lba);
+/* CHS to LBA
+ disk_descriptor: (in) Disk descriptor
+ chs:             (in) CHS struct
+ Returns: the LBA */
+LBA chs_to_lba(const CHS disk_descriptor, const CHS chs);
+
+void chs_advance(const CHS disk_descriptor, CHS* const chs);
+
+void chs_set(CHS* const dest, const CHS src);
 
 #endif
