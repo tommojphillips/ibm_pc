@@ -8,18 +8,10 @@
 
 #include "ring_buffer.h"
 
-void ring_buffer_reset(RING_BUFFER* rb) {
-	if (rb != NULL) {		
-		rb->count = 0;
-		rb->head = 0;
-		rb->tail = 0;
-	}
-}
-
-int ring_buffer_init(RING_BUFFER* rb, int buffer_size) {
+int ring_buffer_create(RING_BUFFER* rb, int buffer_size) {
 	if (rb != NULL) {
 
-		rb->buffer = (uint8_t*)calloc(1, buffer_size);
+		rb->buffer = calloc(1, buffer_size);
 		if (rb->buffer == NULL) {
 			return 1;
 		}
@@ -30,7 +22,6 @@ int ring_buffer_init(RING_BUFFER* rb, int buffer_size) {
 	}
 	return 1;
 }
-
 void ring_buffer_destroy(RING_BUFFER* rb) {
 	if (rb != NULL) {
 
@@ -43,6 +34,15 @@ void ring_buffer_destroy(RING_BUFFER* rb) {
 		ring_buffer_reset(rb);
 	}
 }
+
+void ring_buffer_reset(RING_BUFFER* rb) {
+	if (rb != NULL) {		
+		rb->count = 0;
+		rb->head = 0;
+		rb->tail = 0;
+	}
+}
+
 void ring_buffer_push(RING_BUFFER* rb, uint8_t item) {
 	rb->buffer[rb->tail] = item;
 	rb->tail = (rb->tail + 1) % rb->buffer_size;
@@ -71,4 +71,7 @@ int ring_buffer_peek(RING_BUFFER* rb, int head_offset, uint8_t* out) {
 		return 0;
 	}
 	return 1;
+}
+int ring_buffer_is_empty(RING_BUFFER* rb) {
+	return rb->count == 0;
 }

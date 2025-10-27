@@ -19,7 +19,7 @@ typedef struct RING_BUFFER {
 	rb: The ring buffer struct
 	buffer_size: the buffer size
 	Returns: 0 if success. Otherwise returns 1. (malloc error, rb NULL) */
-int ring_buffer_init(RING_BUFFER* rb, int buffer_size);
+int ring_buffer_create(RING_BUFFER* rb, int buffer_size);
 
 /* Destroy the buffer 
 	rb: The ring buffer struct */
@@ -46,5 +46,10 @@ uint8_t ring_buffer_pop(RING_BUFFER* rb);
 	out: the value at the offset. Can be NULL ie; Dont return the value.
 	Returns: 0 if the offset is in the vaild range of the queue. (head_offset < queue_count). Otherwise returns 1. */
 int ring_buffer_peek(RING_BUFFER* rb, int head_offset, uint8_t* out);
+
+/* Is the ring buffer empty
+	rb: The ring buffer struct 
+	Returns: 0 if the ring buffer has any bytes. Otherwise returns 1. */
+int ring_buffer_is_empty(RING_BUFFER* rb);
 
 #endif
