@@ -115,21 +115,26 @@ The project is built in Visual Studio 2022
 
 ### Command-Line:
 
-| Switch                       | Switch (ALT)                 | Description                                                                                       |
-|------------------------------|------------------------------|---------------------------------------------------------------------------------------------------|
-| `-config <config_file>`      | `-c <config_file>`           | Set the config file                                                                               |
-| `-o <offset>`                | N/A                          | Set the memory offset for the **next ROM file**. The offset is in bytes                           |
-| `<rom_file>`                 | N/A                          | Path to a ROM file. It is loaded at the current offset. Multiple ROMs can be loaded sequentially. |
-| `<A-D>: <disk_path>`         | N/A                          | Load a disk image into drive: A,B,C,D. Example: `A: msdos4_startup.img`.                          |
-| `-disk [A-D:]<disk_path>`    | `-d [A-D:]<disk_path>`       | Load a disk image into drive: A,B,C,D. Example: `-disk A:msdos4_startup.img`.                     |
-| `-disk-write-protect`        | `-dwp`                       | Write protect the next loaded disk. Example: `-dwp A: msdos4_startup.img`.                        |
-| `-disks <0-4>`               | `-ds <0-4>`                  | Set amount of disk drives: 0-4.                                                                   |
-| `-video <video_adapter>`     | N/A                          | Select video hardware: MDA, CGA, NONE.                                                            |
-| `-ram <ram>`                 | `-r <ram>`                   | Amount of conventional RAM. For 16–64 KB, multiples of 16 KB; for 64–736 KB, multiples of 32 KB.  |
-| `-sw1 <sw1>` / `-sw2 <sw2>`  | N/A                          | Overrides DIP switch settings for the motherboard. If a DIP switch isnt provided; it is set automaticlly based on the config |
-| `-model <model>`             | N/A                          | Motherboard model: `5150_16_64` (16–64 KB), `5150_64_256` (64–256 KB), etc.                       |
-| `-dbg`                       | N/A                          | Opens a debug window for development.                                                             |
-| Numbers                      | Can be in decimal, hex (`0x`), or binary (`0b`).                                                  |
+| Switch                       | Switch (ALT)           | Description                                             | Values                         |
+|------------------------------|------------------------|---------------------------------------------------------|--------------------------------|
+| `-config <config_file>`      | `-c <config_file>`     | Set the config file                                     | file path                      |
+| `-o <offset>`                | N/A                    | Set the memory offset for the **next ROM file**.        | `0x00000` - `0xFFFFF`          |
+| `<rom_file>`                 | N/A                    | Path to a ROM file. It is loaded at the current offset. | file path                      |
+| `<A-D>: <disk_path>`         | N/A                    | Load a disk image into a drive.                         | `A`, `B`, `C`, `D` ; file path |
+| `-disk-write-protect`        | `-dwp`                 | Write protect the next loaded disk.                     | N/A                            |
+| `-disks <0-4>`               | `-ds <0-4>`            | Number of floppy drives present. 0-4.                   | `0` - `4`                      |
+| `-video <video_adapter>`     | `-v`                   | Selects which display adapter to emulate                | `MDA`, `CGA`                   |
+| `-ram <ram>`                 | `-r <ram>`             | Amount of conventional RAM.                             | 16KB - 736KB                   |
+| `-sw1 <sw1>`                 | N/A                    | Value of motherboard DIP switch SW1                     | `0` - `255`                    |
+| `-sw2 <sw2>`                 | N/A                    | Value of motherboard DIP switch SW2                     | `0` - `255`                    |
+| `-model <model>`             | N/A                    | Motherboard model                                       | `5150_16_64`, `5150_64_256`    |
+| `-dbg`                       | N/A                    | Enables the debug UI                                    | N/A                            |
+
+### Notes
+ - Numbers can be written in decimal, hexadecimal (0x), or binary (0b) form.
+ - RAM can be provided in KB or BYTES.
+ - When a ROM is loaded, `-o` is automatically incremented by the files size; You can chain ROM files with a single `-o <offset>` 
+ - If a DIP switch (`sw1`, `sw2`) isnt provided; it is set automatically based on the provided config
 
  ### Example:
 ```
@@ -202,8 +207,8 @@ Structs can also be written in a single line:
 | `video_adapter`        | ENUM   | Selects which display adapter to emulate           | `MDA`, `CGA`, `CGA40`, `CGA80` |
 | `conventional_ram`     | INT    | Amount of conventional RAM installed               | `16K` - `736K`                 |
 | `num_floppies`         | INT    | Number of floppy drives present                    | `0` - `4`                      |
-| `sw1`                  | INT    | Value of motherboard DIP switch bank SW1           | `0` - `255`                    |
-| `sw2`                  | INT    | Value of motherboard DIP switch bank SW2           | `0` - `255`                    |
+| `sw1`                  | INT    | Value of motherboard DIP switch SW1                | `0` - `255`                    |
+| `sw2`                  | INT    | Value of motherboard DIP switch SW2                | `0` - `255`                    |
 | `sw1_override`         | BOOL   | Forces manual SW1 value instead of auto-calculated | `true`, `false`                |
 | `sw2_override`         | BOOL   | Forces manual SW2 value instead of auto-calculated | `true`, `false`                |
 | `disk`                 | STRUCT | Defines one or more floppy disk drives             | See below                      |
@@ -215,56 +220,42 @@ Structs can also be written in a single line:
 | `emulate_max_scanline` | BOOL   |                                                    | `true`, `false`                |
 | `mda_font`             | STRING | Path to the MDA font file                          | file path                      |
 | `cga_font`             | STRING | Path to the CGA font file                          | file path                      |
-| `dbg_ui`               | BOOL   | Enables the debugger/overlay UI                    | `true`, `false`                |
+| `dbg_ui`               | BOOL   | Enables the debug UI                               | `true`, `false`                |
 
 ### ROM settings:
-| Key      | Type   | Description                                        | Values                |
-|----------|--------|----------------------------------------------------|-----------------------|
-| `path`   | STRING | Path to the ROM file                               | file path             |
-| `offset` | INT    | Selects which display adapter to emulate           | `0x00000` - `0xFFFFF` |
+| Key      | Type   | Description                                | Values                |
+|----------|--------|--------------------------------------------|-----------------------|
+| `path`   | STRING | Path to the ROM file                       | file path             |
+| `offset` | INT    | The offset to load the ROM file            | `0x00000` - `0xFFFFF` |
 
 ### DISK settings:
-| Key             | Type   | Description                                        | Values             |
-|-----------------|--------|----------------------------------------------------|--------------------|
-| `path`          | STRING | Path to the Disk file                              | file path          |
-| `drive`         | INT    | Selects which display adapter to emulate           | `A`, `B`, `C`, `D` |
-| `write_protect` | BOOL   | Selects which display adapter to emulate           | `true`, `false`    |
-
-#### Example: Disk and ROM Structures
-
-```ini
-disk = [
-  path = 'disks/msdos4_startup.img',
-  drive = 'A',
-  write_protect = false
-]
-
-rom = [
-  path = 'roms/ibm-basic-1.10.rom',
-  offset = 0xF6000
-]
-```
-Each disk or rom struct can appear multiple times to define multiple drives or ROM segments.
+| Key             | Type   | Description                         | Values             |
+|-----------------|--------|-------------------------------------|--------------------|
+| `path`          | STRING | Path to the Disk file               | file path          |
+| `drive`         | INT    | The drive to load the disk file in. | `A`, `B`, `C`, `D` |
+| `write_protect` | BOOL   | write protects the drive            | `true`, `false`    |
 
 ### Notes
+ - Each disk or rom struct can appear multiple times to define multiple drives or ROMS.
  - Numbers can be written in decimal, hexadecimal (0x), or binary (0b) form.
  - Comments start with `;` and extend to the end of the line.
  - Missing values fall back to defaults defined in the emulator.
-
+ - If a `sw1_override` or `sw2_override` is `false`; the associated SW is set automatically based on the provided config
+ - RAM must be provided in BYTES.
 
 ### Example INI:
 
 ```ini
 ; ----------------- PC Config ------------------
 model = '5150_64_256'         ; 5150_16_64, 5150_64_256
-video_adapter = 'CGA'         ; MDA, CGA, CGA40
+video_adapter = 'CGA'         ; MDA, CGA, CGA40, CGA80
 conventional_ram = 0x40000    ; 0x4000 - 0xB8000 (16K - 736K)
 num_floppies = 2              ; 0, 1, 2, 4
 ; ----------------------------------------------
 
 ; --------------- DIP SWITCHES -----------------
-sw1_override = 0
-sw2_override = 0
+sw1_override = false
+sw2_override = false
 sw1 = 0b00000000
 sw2 = 0b00000000
 ; ----------------------------------------------
@@ -287,8 +278,8 @@ rom = [ address = 0xC8000, path = 'roms/expansion_rom.bin' ]
 texture_scale_mode = 'Nearest' ; Nearest, Linear
 display_scale_mode = 'Fit'     ; Fit, Stretched
 display_view_mode = 'Cropped'  ; Cropped, Full
-correct_aspect_ratio = 1
-emulate_max_scanline = 1
+correct_aspect_ratio = true
+emulate_max_scanline = true
 ; ----------------------------------------------
 
 ; --------------- Display Fonts ----------------
@@ -297,7 +288,7 @@ cga_font = 'fonts/Bm437_IBM_CGA.FON'
 ; ----------------------------------------------
 
 ; ------------------- DEBUG --------------------
-dbg_ui = 0
+dbg_ui = false
 ; ----------------------------------------------
 
 ```
