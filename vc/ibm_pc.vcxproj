@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-ASAN|Win32">
+      <Configuration>Debug-ASAN</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-ASAN|x64">
+      <Configuration>Debug-ASAN</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
@@ -33,6 +41,13 @@
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>true</EnableASAN>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>true</EnableASAN>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -46,6 +61,13 @@
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>false</EnableASAN>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -62,10 +84,16 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -77,26 +105,60 @@
     <OutDir>..\bin\x86\$(Configuration)\</OutDir>
     <IntDir>obj\x86\$(Configuration)\</IntDir>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LibraryPath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|Win32'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
+    <OutDir>..\bin\x86\$(Configuration)\</OutDir>
+    <IntDir>obj\x86\$(Configuration)\</IntDir>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LibraryPath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
     <OutDir>..\bin\x86\$(Configuration)\</OutDir>
     <IntDir>obj\x86\$(Configuration)\</IntDir>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LibraryPath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
     <IntDir>obj\x64\$(Configuration)\</IntDir>
     <OutDir>..\bin\x64\$(Configuration)\</OutDir>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64</LibraryPath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|x64'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
+    <IntDir>obj\x64\$(Configuration)\</IntDir>
+    <OutDir>..\bin\x64\$(Configuration)\</OutDir>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64</LibraryPath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
     <IntDir>obj\x64\$(Configuration)\</IntDir>
     <OutDir>..\bin\x64\$(Configuration)\</OutDir>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64</LibraryPath>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;I8086_ENABLE_INTERRUPT_HOOKS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <CompileAs>CompileAsC</CompileAs>
+      <AdditionalOptions>/w34255 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);SDL3.lib;SDL3_ttf.lib;UI.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|Win32'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
@@ -124,6 +186,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <LanguageStandard_C>Default</LanguageStandard_C>
       <CompileAs>CompileAsC</CompileAs>
+      <AssemblerOutput>NoListing</AssemblerOutput>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,6 +197,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;I8086_ENABLE_INTERRUPT_HOOKS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <CompileAs>CompileAsC</CompileAs>
+      <AdditionalOptions>/w34255 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);SDL3.lib;SDL3_ttf.lib;UI.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|x64'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
@@ -161,6 +240,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <LanguageStandard_C>Default</LanguageStandard_C>
       <CompileAs>CompileAsC</CompileAs>
+      <AssemblerOutput>NoListing</AssemblerOutput>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -176,6 +256,7 @@
     <ClCompile Include="..\lib\i8086\src\i8086_alu.c" />
     <ClCompile Include="..\lib\i8086\src\i8086_muldiv.c" />
     <ClCompile Include="..\lib\i8086\src\sign_extend.c" />
+    <ClCompile Include="..\src\args.c" />
     <ClCompile Include="..\src\backend\chipset\i8237_dma.c" />
     <ClCompile Include="..\src\backend\chipset\i8253_pit.c" />
     <ClCompile Include="..\src\backend\chipset\i8255_ppi.c" />
@@ -185,7 +266,6 @@
     <ClCompile Include="..\src\backend\fdd\fdd.c" />
     <ClCompile Include="..\src\backend\fdd\lba.c" />
     <ClCompile Include="..\src\backend\ibm_pc.c" />
-    <ClCompile Include="..\src\backend\input.c" />
     <ClCompile Include="..\src\backend\io\isa_bus.c" />
     <ClCompile Include="..\src\backend\io\memory_map.c" />
     <ClCompile Include="..\src\backend\isa_cards\cga_isa_card.c" />
@@ -196,6 +276,7 @@
     <ClCompile Include="..\src\backend\video\cga.c" />
     <ClCompile Include="..\src\backend\video\crtc_6845.c" />
     <ClCompile Include="..\src\backend\video\mda.c" />
+    <ClCompile Include="..\src\frontend\loadini\loadini.c" />
     <ClCompile Include="..\src\frontend\sdl\dbg_gui.c" />
     <ClCompile Include="..\src\frontend\sdl\sdl3_button.c" />
     <ClCompile Include="..\src\frontend\sdl\sdl3_common.c" />
@@ -215,6 +296,7 @@
     <ClInclude Include="..\lib\i8086\src\i8086_mnem.h" />
     <ClInclude Include="..\lib\i8086\src\i8086_muldiv.h" />
     <ClInclude Include="..\lib\i8086\src\sign_extend.h" />
+    <ClInclude Include="..\src\args.h" />
     <ClInclude Include="..\src\backend\bit_utils.h" />
     <ClInclude Include="..\src\backend\chipset\i8237_dma.h" />
     <ClInclude Include="..\src\backend\chipset\i8253_pit.h" />
@@ -225,7 +307,6 @@
     <ClInclude Include="..\src\backend\fdd\fdd.h" />
     <ClInclude Include="..\src\backend\fdd\lba.h" />
     <ClInclude Include="..\src\backend\ibm_pc.h" />
-    <ClInclude Include="..\src\backend\input.h" />
     <ClInclude Include="..\src\backend\io\isa_bus.h" />
     <ClInclude Include="..\src\backend\io\memory_map.h" />
     <ClInclude Include="..\src\backend\isa_cards\cga_isa_card.h" />
@@ -236,6 +317,7 @@
     <ClInclude Include="..\src\backend\video\cga.h" />
     <ClInclude Include="..\src\backend\video\crtc_6845.h" />
     <ClInclude Include="..\src\backend\video\mda.h" />
+    <ClInclude Include="..\src\frontend\loadini\loadini.h" />
     <ClInclude Include="..\src\frontend\sdl\dbg_gui.h" />
     <ClInclude Include="..\src\frontend\sdl\sdl3_typedefs.h" />
     <ClInclude Include="..\src\frontend\sdl\sdl3_button.h" />

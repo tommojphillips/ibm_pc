@@ -35,6 +35,9 @@
     <Filter Include="backend\isa_cards">
       <UniqueIdentifier>{0d4f8aae-ede2-4734-8051-00c5062b6756}</UniqueIdentifier>
     </Filter>
+    <Filter Include="frontend\loadini">
+      <UniqueIdentifier>{bda4b30c-dc97-44f8-8075-37cecc9b2dcc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\backend\chipset\i8237_dma.c">
@@ -107,9 +110,6 @@
     <ClCompile Include="..\src\backend\timing.c">
       <Filter>backend</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\backend\input.c">
-      <Filter>backend</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\backend\fdd\lba.c">
       <Filter>backend\fdd</Filter>
     </ClCompile>
@@ -146,6 +146,10 @@
     <ClCompile Include="..\src\backend\isa_cards\mda_isa_card.c">
       <Filter>backend\isa_cards</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\frontend\loadini\loadini.c">
+      <Filter>frontend\loadini</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\args.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\backend\chipset\i8237_dma.h">
@@ -226,9 +230,6 @@
     <ClInclude Include="..\src\backend\bit_utils.h">
       <Filter>backend\utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\backend\input.h">
-      <Filter>backend</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\backend\fdd\lba.h">
       <Filter>backend\fdd</Filter>
     </ClInclude>
@@ -262,5 +263,9 @@
     <ClInclude Include="..\src\backend\isa_cards\mda_isa_card.h">
       <Filter>backend\isa_cards</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\frontend\loadini\loadini.h">
+      <Filter>frontend\loadini</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\args.h" />
   </ItemGroup>
 </Project>
