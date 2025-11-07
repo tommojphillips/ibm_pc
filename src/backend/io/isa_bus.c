@@ -57,7 +57,7 @@ int isa_bus_create(ISA_BUS* bus, MEMORY_MAP* map, int slots) {
 void isa_bus_destroy(ISA_BUS* bus) {
 	if (bus != NULL) {		
 		if (bus->cards != NULL) {
-			for (int i = 0; i < bus->card_count; ++i) {
+			for (int i = 0; i < bus->card_index; ++i) {
 
 				isa_bus_remove_card(bus, i);
 
