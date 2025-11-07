@@ -24,39 +24,53 @@
 #define dbg_print(x, ...)
 #endif
 
-static void get_cell_position(DISPLAY_INSTANCE* display, float offset_x, float offset_y, float x, float y, SDL_FRect* rect) {
+static void get_cell_position(const DISPLAY_INSTANCE* const display, const float offset_x, const float offset_y, const int x, const int y, SDL_FRect* const rect) {
 	rect->x = offset_x + (x * display->cell_w);
 	rect->y = offset_y + (y * display->cell_h);
 	rect->w = display->cell_w;
 	rect->h = display->cell_h;
 }
-static void get_cell_dimensions(DISPLAY_INSTANCE* display, int w, int h, float* offset_x, float* offset_y) {
+static void get_cell_dimensions(DISPLAY_INSTANCE* display, const int w, const int h, float* const offset_x, float* const offset_y) {
 	// Compute available drawable area
-	float window_w = (float)display->window->transform.w;
-	float window_h = (float)display->window->transform.h - display->offset_y;
+	const float window_w = (float)display->window->transform.w;
+	const float window_h = (float)display->window->transform.h - display->offset_y;
+		
+	switch (display->config.display_scale_mode) {
+		case DISPLAY_SCALE_FIT: {
+			float aspect_correction_y = 1.0f;
+			if (display->config.correct_aspect_ratio) {
+				/* 1.2 = K * (4/3) * (w/h)
+				 * 1.2 = K * 1.3333 * 1.6
+				 * 1.2 = K * 2.1333
+				 * K = 1.2 / 2.1333 = 0.5625 */
+				const float aspect_correction_factor = 0.5625f;
+				const float physical_aspect = 4.0f / 3.0f;
+				const float actual_aspect = (float)w / (float)h; 
+				aspect_correction_y = aspect_correction_factor * physical_aspect * actual_aspect;
+			}
 
-	float aspect_correction_y = 1.0f;
-	if (display->correct_aspect_ratio) {
-		/* 1.2 = K * (4/3) * (320/200)
-		 * 1.2 = K * 1.3333 * 1.6
-		 * 1.2 = K * 2.1333
-		 * K = 1.2 / 2.1333 = 0.5625 */
-		const float aspect_correction_factor = 0.5625f;
-		const float physical_aspect = 4.0f / 3.0f;
-		aspect_correction_y = aspect_correction_factor * physical_aspect * ((float)w / (float)h);
+			// Compute the *effective* display height
+			const float effective_height = h * aspect_correction_y;
+
+			// Determine scale to fit both width and height
+			const float scale_x = window_w / w;
+			const float scale_y = window_h / effective_height;
+			const float scale = (scale_x < scale_y) ? scale_x : scale_y;
+
+			// Set cell size
+			display->cell_w = scale;
+			display->cell_h = scale * aspect_correction_y;
+		} break;
+
+		case DISPLAY_SCALE_STRETCH: {
+			const float scale_x = window_w / w;
+			const float scale_y = window_h / h;
+
+			// Set cell size
+			display->cell_w = scale_x;
+			display->cell_h = scale_y;
+		} break;
 	}
-
-	// Compute the *effective* display height
-	float effective_height = h * aspect_correction_y;
-
-	// Determine scale to fit both width and height
-	float scale_x = window_w / w;
-	float scale_y = window_h / effective_height;
-	float scale = (scale_x < scale_y) ? scale_x : scale_y;
-
-	// Set cell size
-	display->cell_w = scale;
-	display->cell_h = scale * aspect_correction_y;
 
 	// Compute offsets to center image
 	float drawn_w = w * display->cell_w;
@@ -66,7 +80,7 @@ static void get_cell_dimensions(DISPLAY_INSTANCE* display, int w, int h, float* 
 	*offset_y = display->offset_y + (window_h - drawn_h) / 2.0f;
 }
 
-static void get_cursor_position(const CRTC_6845* crtc, uint8_t* row, uint8_t* column) {
+static void get_cursor_position(const CRTC_6845* const crtc, uint8_t* row, uint8_t* column) {
 	/* calculate cursor position */
 	if (crtc->hdisp > 0) {
 		*row = (crtc->cursor_address / crtc->hdisp) & 0xFF;
@@ -74,18 +88,18 @@ static void get_cursor_position(const CRTC_6845* crtc, uint8_t* row, uint8_t* co
 	}
 }
 
-static void fill_screen(WINDOW_INSTANCE* window, const COLOR_RGB color) {
+static void fill_screen(const DISPLAY_INSTANCE* const display, const COLOR_RGB color) {
 	const SDL_FRect rect = {
 		.x = 0,
 		.y = 0,
-		.w = (float)window->transform.w,
-		.h = (float)window->transform.h,
+		.w = (float)display->window->transform.w,
+		.h = (float)display->window->transform.h,
 	};
-	SDL_SetRenderDrawColor(window->renderer, color.r, color.g, color.b, 0xFF);
-	SDL_RenderFillRect(window->renderer, &rect);
+	SDL_SetRenderDrawColor(display->window->renderer, color.r, color.g, color.b, 0xFF);
+	SDL_RenderFillRect(display->window->renderer, &rect);
 }
 
-static void draw_overscan(WINDOW_INSTANCE* window, const COLOR_RGB color, float offset_x, float offset_y) {
+static void draw_overscan(const WINDOW_INSTANCE* const window, const COLOR_RGB color, const float offset_x, const float offset_y) {
 	const SDL_FRect rect = {
 		.x = offset_x,
 		.y = offset_y,
@@ -97,13 +111,13 @@ static void draw_overscan(WINDOW_INSTANCE* window, const COLOR_RGB color, float 
 }
 
 /* Dummy display */
-static void disabled_draw_screen(WINDOW_INSTANCE* window) {
-	COLOR_RGB col = { 0, 0, 0 };
-	fill_screen(window, col);
+static void disabled_draw_screen(const DISPLAY_INSTANCE* const display) {
+	const COLOR_RGB col = { 0, 0, 0 };
+	fill_screen(display, col);
 }
-void dummy_draw_screen(WINDOW_INSTANCE* window, DISPLAY_INSTANCE* display) {
-	(void)display;
-	disabled_draw_screen(window);
+static void dummy_draw_screen(DISPLAY_INSTANCE* display, void* param2) {
+	(void)param2;
+	disabled_draw_screen(display);
 }
 
 /* MDA */
@@ -130,6 +144,7 @@ static void mda_draw_character(DISPLAY_INSTANCE* display, const SDL_FRect* rect,
 	else {
 		SDL_SetTextureColorMod(display->font_data->textures[character], 0, 0, 0);
 	}
+	SDL_SetTextureScaleMode(display->font_data->textures[character], display->config.texture_scale_mode);
 	SDL_RenderTexture(display->window->renderer, display->font_data->textures[character], NULL, rect);
 }
 static void mda_draw_cursor(DISPLAY_INSTANCE* display, const SDL_FRect* rect, const uint8_t attribute) {
@@ -150,21 +165,22 @@ static void mda_draw_cursor(DISPLAY_INSTANCE* display, const SDL_FRect* rect, co
 	else {
 		SDL_SetTextureColorMod(display->font_data->textures['_'], 0, 0, 0);
 	}
+	SDL_SetTextureScaleMode(display->font_data->textures['_'], display->config.texture_scale_mode);
 	SDL_RenderTexture(display->window->renderer, display->font_data->textures['_'], NULL, rect);
 }
-static void mda_text_draw_screen(DISPLAY_INSTANCE* display) {
+static void mda_text_draw_screen(DISPLAY_INSTANCE* display, MDA* mda) {
 
 	/* get cell dimensions */
 	float offset_x;
 	float offset_y;
-	get_cell_dimensions(display, ibm_pc->mda.crtc.hdisp, ibm_pc->mda.crtc.vdisp, &offset_x, &offset_y);
+	get_cell_dimensions(display, mda->crtc.hdisp, mda->crtc.vdisp, &offset_x, &offset_y);
 
 	/* increment blink; count to 31 */
-	ibm_pc->mda.blink = (ibm_pc->mda.blink++) & 0x1F;
+	mda->blink = (mda->blink++) & 0x1F;
 
-	for (uint8_t row = 0; row < ibm_pc->mda.crtc.vdisp; ++row) {
-		for (uint8_t column = 0; column < ibm_pc->mda.crtc.hdisp; ++column) {
-			const uint16_t char_index = ibm_pc->mda.crtc.start_address + row * ibm_pc->mda.crtc.hdisp + column;
+	for (uint8_t row = 0; row < mda->crtc.vdisp; ++row) {
+		for (uint8_t column = 0; column < mda->crtc.hdisp; ++column) {
+			const uint16_t char_index = mda->crtc.start_address + row * mda->crtc.hdisp + column;
 			const uint32_t char_address = MDA_PHYS_ADDRESS(char_index * 2);
 			const uint8_t character = ibm_pc->cpu.funcs.read_mem_byte(char_address);
 			const uint8_t attribute = ibm_pc->cpu.funcs.read_mem_byte(char_address + 1);
@@ -178,20 +194,19 @@ static void mda_text_draw_screen(DISPLAY_INSTANCE* display) {
 			mda_draw_character(display, &rect, character, attribute);
 
 			/* draw cursor */
-			if (char_index == ibm_pc->mda.crtc.cursor_address) {
+			if (char_index == mda->crtc.cursor_address) {
 				mda_draw_cursor(display, &rect, attribute);
 			}
 		}
 	}
 }
-static void mda_draw_screen(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display) {
-	(void)instance;
-	if (!(ibm_pc->mda.mode & MDA_MODE_VIDEO_ENABLE)) {
-		disabled_draw_screen(instance);
+static void mda_draw_screen(DISPLAY_INSTANCE* display, MDA* mda) {
+	if (!(mda->mode & MDA_MODE_VIDEO_ENABLE)) {
+		disabled_draw_screen(display);
 		return;
 	}
 	
-	mda_text_draw_screen(display);
+	mda_text_draw_screen(display, mda);
 }
 
 /* CGA */
@@ -232,64 +247,67 @@ static const COLOR_RGB cga_colors[16] = {
 		{ 0xFF, 0xFF, 0xFF }, /* bright white */
 };
 
-static void cga_graphics_draw_lo_res(DISPLAY_INSTANCE* display) {
+static void cga_graphics_draw_lo_res(DISPLAY_INSTANCE* display, CGA* cga) {
 	const uint8_t palette0[8] = {
-		(ibm_pc->cga.color & CGA_COLOR_BG),
+		(cga->color & CGA_COLOR_BG),
 		CGA_COLOR_GREEN,
 		CGA_COLOR_RED,
 		CGA_COLOR_BROWN,
-		(ibm_pc->cga.color & CGA_COLOR_BG),
+		(cga->color & CGA_COLOR_BG),
 		CGA_COLOR_BRIGHT_GREEN,
 		CGA_COLOR_BRIGHT_RED,
 		CGA_COLOR_BRIGHT_YELLOW,
 	};
 	const uint8_t palette1[8] = {
-		(ibm_pc->cga.color & CGA_COLOR_BG),
+		(cga->color & CGA_COLOR_BG),
 		CGA_COLOR_CYAN,
 		CGA_COLOR_MAGENTA,
 		CGA_COLOR_WHITE,
-		(ibm_pc->cga.color & CGA_COLOR_BG),
+		(cga->color & CGA_COLOR_BG),
 		CGA_COLOR_BRIGHT_CYAN,
 		CGA_COLOR_BRIGHT_MAGENTA,
 		CGA_COLOR_BRIGHT_WHITE,
 	};
 	const uint8_t palette2[8] = {
-		(ibm_pc->cga.color & CGA_COLOR_BG),
+		(cga->color & CGA_COLOR_BG),
 		CGA_COLOR_CYAN,
 		CGA_COLOR_RED,
 		CGA_COLOR_WHITE,
-		(ibm_pc->cga.color & CGA_COLOR_BG),
+		(cga->color & CGA_COLOR_BG),
 		CGA_COLOR_BRIGHT_CYAN,
 		CGA_COLOR_BRIGHT_RED,
 		CGA_COLOR_BRIGHT_WHITE,
 	};
 		
+	int width = 320;
+	int height = 200;
+
 	const int pixels_per_byte = 4;
-	const int bytes_per_row = ibm_pc->cga.width / pixels_per_byte;
+	const int bytes_per_row = width / pixels_per_byte;
 
 	/* get cell dimensions */
 	float offset_x;
 	float offset_y;
-	get_cell_dimensions(display, ibm_pc->cga.width, ibm_pc->cga.height, &offset_x, &offset_y);
+	get_cell_dimensions(display, width, height, &offset_x, &offset_y);
 
 #if 0
 	/* draw boarder */
-	fill_screen(display, cga_colors[(ibm_pc->cga.color & CGA_COLOR_BG)]);
+	fill_screen(display, cga_colors[(cga->color & CGA_COLOR_BG)]);
 #endif
 
 	// choose color palette
 	const uint8_t* palette;
-	if (ibm_pc->cga.mode & CGA_MODE_BW) {
+	if (cga->mode & CGA_MODE_BW) {
 		palette = &palette2[0];
 	}
-	else if (ibm_pc->cga.color & CGA_COLOR_PALETTE) {
+	else if (cga->color & CGA_COLOR_PALETTE) {
 		palette = &palette1[0];
 	} 
 	else {
 		palette = &palette0[0];
 	}
 
-	for (int y = 0; y < ibm_pc->cga.height; ++y) {
+	for (int y = 0; y < height; ++y) {
 		uint16_t base = (y & 1) ? 0x2000 : 0x0000;
 		uint32_t row_offset = (y >> 1) * bytes_per_row;
 
@@ -298,7 +316,7 @@ static void cga_graphics_draw_lo_res(DISPLAY_INSTANCE* display) {
 			uint8_t byte = ibm_pc->cpu.funcs.read_mem_byte(address);
 
 			for (int bit = 6; bit >= 0; bit -= 2) {
-				const uint8_t color_index = ((byte >> bit) & 0x3) | (ibm_pc->cga.color & CGA_COLOR_BRIGHT_FG) >> 2;
+				const uint8_t color_index = ((byte >> bit) & 0x3) | (cga->color & CGA_COLOR_BRIGHT_FG) >> 2;
 				const COLOR_RGB c = cga_colors[palette[color_index]];
 				SDL_SetRenderDrawColor(display->window->renderer, c.r, c.g, c.b, 0xFF);
 
@@ -311,22 +329,25 @@ static void cga_graphics_draw_lo_res(DISPLAY_INSTANCE* display) {
 		}
 	}
 }
-static void cga_graphics_draw_hi_res(DISPLAY_INSTANCE* display) {
+static void cga_graphics_draw_hi_res(DISPLAY_INSTANCE* display, CGA* cga) {
+
+	const int width = 640;
+	const int height = 200;
 
 	const int pixels_per_byte = 8;
-	const int bytes_per_row = ibm_pc->cga.width / pixels_per_byte;
+	const int bytes_per_row = width / pixels_per_byte;
 
 	/* get cell dimensions */
 	float offset_x;
 	float offset_y;
-	get_cell_dimensions(display, ibm_pc->cga.width, ibm_pc->cga.height, &offset_x, &offset_y);
+	get_cell_dimensions(display, width,height, &offset_x, &offset_y);
 
 #if 0
 	/* draw boarder */
 	fill_screen(display, cga_colors[CGA_COLOR_BLACK]);
 #endif
 
-	for (int y = 0; y < ibm_pc->cga.height; ++y) {
+	for (int y = 0; y < height; ++y) {
 		uint16_t base = (y & 1) ? 0x2000 : 0x0000;
 		uint32_t row_offset = (y >> 1) * bytes_per_row;
 
@@ -336,7 +357,7 @@ static void cga_graphics_draw_hi_res(DISPLAY_INSTANCE* display) {
 
 			for (int bit = 7; bit >= 0; --bit) {
 				const uint8_t color_index = (byte >> bit) & 0x1;
-				const COLOR_RGB* c = &cga_colors[(ibm_pc->cga.color & CGA_COLOR_FG) * color_index];
+				const COLOR_RGB* c = &cga_colors[(cga->color & CGA_COLOR_FG) * color_index];
 				SDL_SetRenderDrawColor(display->window->renderer, c->r, c->g, c->b, 0xFF);
 
 				/* get cell position */
@@ -367,7 +388,7 @@ static void cga_draw_character(DISPLAY_INSTANCE* display, const SDL_FRect* rect,
 	}
 
 	float scanline_ratio = 1.0;
-	if (display->scanline_emu) {
+	if (display->config.scanline_emu) {
 		scanline_ratio = (ibm_pc->cga.crtc.max_scanline + 1) / 8.0f;
 	}
 
@@ -386,7 +407,7 @@ static void cga_draw_character(DISPLAY_INSTANCE* display, const SDL_FRect* rect,
 	/* render text */
 	const COLOR_RGB col = cga_colors[(attribute & CGA_ATTRIBUTE_FG)];
 	SDL_SetTextureColorMod(display->font_data->textures[character], col.r, col.g, col.b);
-	SDL_SetTextureScaleMode(display->font_data->textures[character], display->scale_mode);
+	SDL_SetTextureScaleMode(display->font_data->textures[character], display->config.texture_scale_mode);
 	SDL_RenderTexture(display->window->renderer, display->font_data->textures[character], &src, rect);
 }
 static void cga_draw_cursor(DISPLAY_INSTANCE* display, const SDL_FRect* rect, const uint8_t attribute) {
@@ -405,7 +426,7 @@ static void cga_draw_cursor(DISPLAY_INSTANCE* display, const SDL_FRect* rect, co
 	}
 
 	float scanline_ratio = 1.0;
-	if (display->scanline_emu) {
+	if (display->config.scanline_emu) {
 		scanline_ratio = (ibm_pc->cga.crtc.max_scanline + 1) / 8.0f;
 	}
 
@@ -419,22 +440,22 @@ static void cga_draw_cursor(DISPLAY_INSTANCE* display, const SDL_FRect* rect, co
 	/* render text */
 	const COLOR_RGB  col = cga_colors[(attribute & CGA_ATTRIBUTE_FG)];
 	SDL_SetTextureColorMod(display->font_data->textures['_'], col.r, col.g, col.b);
-	SDL_SetTextureScaleMode(display->font_data->textures['_'], display->scale_mode);
+	SDL_SetTextureScaleMode(display->font_data->textures['_'], display->config.texture_scale_mode);
 	SDL_RenderTexture(display->window->renderer, display->font_data->textures['_'], &src, rect);
 }
-static void cga_text_draw_screen(DISPLAY_INSTANCE* display) {
+static void cga_text_draw_screen(DISPLAY_INSTANCE* display, CGA* cga) {
 
 	/* get cell dimensions */
 	float offset_x;
 	float offset_y;
-	get_cell_dimensions(display, ibm_pc->cga.crtc.hdisp, ibm_pc->cga.crtc.vdisp, &offset_x, &offset_y);
+	get_cell_dimensions(display, cga->crtc.hdisp, cga->crtc.vdisp, &offset_x, &offset_y);
 
 	/* increment blink; count to 31 */
-	ibm_pc->cga.blink = (ibm_pc->cga.blink++) & 0x1F;
+	cga->blink = (cga->blink++) & 0x1F;
 	
 #if 0
 	/* draw boarder */
-	if (ibm_pc->cga.mode & CGA_MODE_GRAPHICS_RES_HI) {
+	if (cga->mode & CGA_MODE_GRAPHICS_RES_HI) {
 		/* In text mode, setting this bit has the following effects:
 		   - The border is always black.
 		   - The characters displayed are missing columns - as if the bit pattern has 
@@ -443,13 +464,13 @@ static void cga_text_draw_screen(DISPLAY_INSTANCE* display) {
 		fill_screen(display, cga_colors[CGA_COLOR_BLACK]);
 	}
 	else {
-		fill_screen(display, cga_colors[ibm_pc->cga.color & CGA_COLOR_BG]);
+		fill_screen(display, cga_colors[cga->color & CGA_COLOR_BG]);
 	}
 #endif
 
-	for (uint8_t row = 0; row < ibm_pc->cga.crtc.vdisp; ++row) {
-		for (uint8_t column = 0; column < ibm_pc->cga.crtc.hdisp; ++column) {
-			const uint16_t char_index = ibm_pc->cga.crtc.start_address + row * ibm_pc->cga.crtc.hdisp + column;
+	for (uint8_t row = 0; row < cga->crtc.vdisp; ++row) {
+		for (uint8_t column = 0; column < cga->crtc.hdisp; ++column) {
+			const uint16_t char_index = cga->crtc.start_address + row * cga->crtc.hdisp + column;
 			const uint32_t char_address = CGA_PHYS_ADDRESS(char_index * 2);
 			const uint8_t character = ibm_pc->cpu.funcs.read_mem_byte(char_address);
 			const uint8_t attribute = ibm_pc->cpu.funcs.read_mem_byte(char_address + 1);
@@ -463,30 +484,29 @@ static void cga_text_draw_screen(DISPLAY_INSTANCE* display) {
 			cga_draw_character(display, &rect, character, attribute);
 
 			/* draw cursor */
-			if (char_index == ibm_pc->cga.crtc.cursor_address) {
+			if (char_index == cga->crtc.cursor_address) {
 				cga_draw_cursor(display, &rect, attribute);
 			}
 		}
 	}
 }
 
-static void cga_draw_screen(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display) {
-	(void)instance;
-	if (!(ibm_pc->cga.mode & CGA_MODE_VIDEO_ENABLE)) {
-		disabled_draw_screen(instance);
+static void cga_draw_screen(DISPLAY_INSTANCE* display, CGA* cga) {
+	if (!(cga->mode & CGA_MODE_VIDEO_ENABLE)) {
+		disabled_draw_screen(display);
 		return;
 	}
 
-	if (ibm_pc->cga.mode & CGA_MODE_GRAPHICS) {
-		if (ibm_pc->cga.mode & CGA_MODE_GRAPHICS_RES_HI) {
-			cga_graphics_draw_hi_res(display);
+	if (cga->mode & CGA_MODE_GRAPHICS) {
+		if (cga->mode & CGA_MODE_GRAPHICS_RES_HI) {
+			cga_graphics_draw_hi_res(display, cga);
 		}
 		else {
-			cga_graphics_draw_lo_res(display);
+			cga_graphics_draw_lo_res(display, cga);
 		}
 	}
 	else {
-		cga_text_draw_screen(display);
+		cga_text_draw_screen(display, cga);
 	}
 }
 
@@ -495,10 +515,9 @@ void display_on_video_adapter_changed(DISPLAY_INSTANCE* display, const uint8_t v
 		switch (video_adapter) {
 			case VIDEO_ADAPTER_MDA_80X25:
 				sdl_timing_init_frame(&display->window->time, HZ_TO_MS(50.0));
-				display->window->on_render[display->on_render_index] = mda_draw_screen;
-				display->window->on_render_param[display->on_render_index] = display;
+				window_instance_set_cb_on_render(display->window, display->on_render_index, mda_draw_screen, display, &ibm_pc->mda);
 
-				if (display_generate_font_map(display, "Bm437_IBM_MDA.FON")) {
+				if (display_generate_font_map(display, display->config.mda_font)) {
 					exit(1);
 				}
 				dbg_print("[DISPLAY] Video adapter: MDA\n");
@@ -506,18 +525,16 @@ void display_on_video_adapter_changed(DISPLAY_INSTANCE* display, const uint8_t v
 			case VIDEO_ADAPTER_CGA_40X25:
 			case VIDEO_ADAPTER_CGA_80X25:
 				sdl_timing_init_frame(&display->window->time, HZ_TO_MS(60.0));
-				display->window->on_render[display->on_render_index] = cga_draw_screen;
-				display->window->on_render_param[display->on_render_index] = display;
+				window_instance_set_cb_on_render(display->window, display->on_render_index, cga_draw_screen, display, &ibm_pc->cga);
 
-				if (display_generate_font_map(display, "Bm437_IBM_CGA.FON")) {
+				if (display_generate_font_map(display, display->config.cga_font)) {
 					exit(1);
 				}
 				dbg_print("[DISPLAY] Video adapter: CGA\n");
 				break;
 			case VIDEO_ADAPTER_NONE:
 				sdl_timing_init_frame(&display->window->time, HZ_TO_MS(60.0));
-				display->window->on_render[display->on_render_index] = dummy_draw_screen;
-				display->window->on_render_param[display->on_render_index] = display;
+				window_instance_set_cb_on_render(display->window, display->on_render_index, dummy_draw_screen, display, NULL);
 				dbg_print("[DISPLAY] Video adapter: DUMMY\n");
 				break;
 		}
@@ -531,19 +548,31 @@ int display_generate_font_map(DISPLAY_INSTANCE* display, const char* font_path) 
 		dbg_print("[DISPLAY] display is NULL\n");
 		return 1;
 	}
-	
-	/* Create font texture map */
+
 	if (font_open_font(display->font_data, font_path)) {
 		return 1;
 	}
 
+	/* Create font texture map */
 	font_destroy_textures(display->font_data);
-
 	if (font_create_textures(display->window->renderer, display->window->text_engine, display->font_data)) {
 		return 1;
 	}
 
+	font_close_font(display->font_data);
 	return 0;
+}
+
+int display_set_window(DISPLAY_INSTANCE* display, WINDOW_INSTANCE* window) {
+	if (display->on_render_index == -1) {
+		display->window = window;
+		display->on_render_index = window_instance_add_cb_on_render(window, dummy_draw_screen, display, NULL);
+		return 0;
+	}
+	else {
+		dbg_print("[DISPLAY] Failed to set window on_render cb. CB already set.\n");
+		return 1;
+	}
 }
 
 int display_create(DISPLAY_INSTANCE** display, WINDOW_INSTANCE* window) {
@@ -557,14 +586,11 @@ int display_create(DISPLAY_INSTANCE** display, WINDOW_INSTANCE* window) {
 		dbg_print("[DISPLAY] Failed to allocate memory\n");
 		return 1;
 	}
-
-	(*display)->window = window;
-
-	(*display)->on_render_index = window_instance_set_cb_on_render(window, dummy_draw_screen, display);
-
-	(*display)->scanline_emu = 1;
-	(*display)->correct_aspect_ratio = 1;
-	(*display)->scale_mode = SDL_SCALEMODE_NEAREST;
+	
+	(*display)->on_render_index = -1;
+	if (window != NULL) {
+		display_set_window(*display, window);
+	}
 
 	/* Create font texture map */
 	if (font_create_map(&(*display)->font_data)) {
