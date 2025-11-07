@@ -96,6 +96,19 @@ typedef struct PC_SPEAKER {
 	uint8_t input;
 } PC_SPEAKER;
 
+#define PATH_LEN 256
+
+typedef struct {
+	char path[PATH_LEN];
+	uint32_t address;
+} ROM;
+
+typedef struct {
+	char path[PATH_LEN];
+	uint8_t drive;
+	uint8_t write_protect;
+} DISK;
+
 typedef struct IBM_PC_CONFIG {
 	uint8_t video_adapter;
 	uint8_t fdc_disks;
@@ -104,9 +117,11 @@ typedef struct IBM_PC_CONFIG {
 	uint8_t sw2_provided;
 	uint8_t sw2;
 	uint8_t model;
-	uint32_t base_memory;
-	uint32_t extended_memory;
 	uint32_t total_memory;
+	DISK* disks;
+	size_t disk_count;
+	ROM* roms;
+	size_t rom_count;
 } IBM_PC_CONFIG;
 
 typedef struct IBM_PC {
@@ -160,18 +175,19 @@ extern IBM_PC* ibm_pc;
 int ibm_pc_create(void);
 void ibm_pc_destroy(void);
 
-int ibm_pc_init(void);
+void ibm_pc_init(void);
 void ibm_pc_reset(void);
 void ibm_pc_update(void);
 
-void cal_planar_io_ram_from_total(void);
-void ibm_pc_set_sw1(void);
-void ibm_pc_set_sw2(void);
+void ibm_pc_add_rom(ROM* rom);
+void ibm_pc_load_roms(void);
+void ibm_pc_add_disk(DISK* disk);
+void ibm_pc_load_disks(void);
+void ibm_pc_set_config(void);
 
 uint8_t determine_planar_ram_sw(uint20_t planar_ram);
 uint8_t determine_io_ram_sw(uint20_t planar_ram, uint20_t io_ram);
 uint20_t determine_planar_ram_size(uint8_t sw1);
 uint20_t determine_io_ram_size(uint8_t sw1, uint8_t sw2);
-void ibm_pc_set_config(void);
 
 #endif

@@ -26,6 +26,8 @@
 
 #include "bit_utils.h"
 
+#include "frontend/utility/file.h"
+
 #define MEM_SIZE 0x100000
 
 /* PORTS */
@@ -111,6 +113,7 @@ uint8_t determine_planar_ram_sw(uint20_t planar_ram) {
 }
 uint20_t determine_planar_ram_size(uint8_t sw1) {
 	// Convert sw1 to planar ram amount
+	
 	// FE169 (6025005 AUG81)
 	// FE167 (6322507 APR84)
 	
@@ -171,25 +174,43 @@ uint20_t determine_io_ram_size(uint8_t sw1, uint8_t sw2) {
 	return io_ram;
 }
 
-void cal_planar_io_ram_from_total(void) {
-	/* Split total ram into planar ram and io channel ram */
+static void cal_planar_io_ram(uint20_t conventional_ram, uint20_t* planar_ram, uint20_t* io_ram) {
+	/* Split conventional ram into planar ram and io channel ram */
 
-	uint32_t max_planar_memory = 64 * 1024;
-	if (ibm_pc->config.total_memory >= max_planar_memory) {
-		ibm_pc->config.base_memory = max_planar_memory;
-		ibm_pc->config.extended_memory = ibm_pc->config.total_memory - max_planar_memory;
+	uint32_t max_planar_ram = 0;
+	uint32_t min_planar_ram = 0;
+	switch (ibm_pc->config.model) {
+		case MODEL_5150_16_64:
+			min_planar_ram = 16 * 1024;
+			max_planar_ram = 64 * 1024;
+			break;
+		case MODEL_5150_64_256:
+			min_planar_ram = 64 * 1024;
+			max_planar_ram = 256 * 1024;
+			break;
+	}
+
+	if (conventional_ram < min_planar_ram) {
+		*planar_ram = min_planar_ram;
+		*io_ram = 0;
 	}
 	else {
-		ibm_pc->config.base_memory = ibm_pc->config.total_memory;
-		ibm_pc->config.extended_memory = 0;
+		if (conventional_ram > max_planar_ram) {
+			*planar_ram = max_planar_ram;
+			*io_ram = conventional_ram - max_planar_ram;
+		}
+		else {
+			*planar_ram = conventional_ram;
+			*io_ram = 0;
+		}
 	}
 }
 
-void ibm_pc_set_sw1(void) {
+static void ibm_pc_set_sw1(uint20_t planar_ram) {
 	/* Set sw1 based on PC Config */
 	if (!ibm_pc->config.sw1_provided) {
 		ibm_pc->config.sw1 = 0;
-		ibm_pc->config.sw1 |= determine_planar_ram_sw(ibm_pc->config.base_memory);
+		ibm_pc->config.sw1 |= determine_planar_ram_sw(planar_ram);
 		ibm_pc->config.sw1 |= ibm_pc->config.video_adapter & SW1_DISPLAY_MASK;
 
 		if (ibm_pc->config.fdc_disks > 0) {
@@ -201,10 +222,10 @@ void ibm_pc_set_sw1(void) {
 		}
 	}
 }
-void ibm_pc_set_sw2(void) {
+static void ibm_pc_set_sw2(uint20_t planar_ram, uint20_t io_ram) {
 	/* Set sw2 based on PC Config */
 	if (!ibm_pc->config.sw2_provided) {
-		ibm_pc->config.sw2 = determine_io_ram_sw(ibm_pc->config.base_memory, ibm_pc->config.extended_memory);
+		ibm_pc->config.sw2 = determine_io_ram_sw(planar_ram, io_ram);
 	}
 }
 
@@ -224,12 +245,12 @@ void ibm_pc_set_config(void) {
 		ibm_pc->config.fdc_disks = 0;
 	}
 
-	ibm_pc->config.base_memory = determine_planar_ram_size(ibm_pc->config.sw1);
-	ibm_pc->config.extended_memory = determine_io_ram_size(ibm_pc->config.sw1, ibm_pc->config.sw2);
-	ibm_pc->config.total_memory = ibm_pc->config.base_memory + ibm_pc->config.extended_memory;
+	uint20_t planar_mem = determine_planar_ram_size(ibm_pc->config.sw1);
+	uint20_t io_mem = determine_io_ram_size(ibm_pc->config.sw1, ibm_pc->config.sw2);
+	ibm_pc->config.total_memory = planar_mem + io_mem;
 
-	dbg_print("Planar RAM: %u Kb\n", ibm_pc->config.base_memory / 1024);
-	dbg_print("IO RAM:     %u Kb\n", ibm_pc->config.extended_memory / 1024);
+	dbg_print("Planar RAM: %u Kb\n", planar_mem / 1024);
+	dbg_print("IO RAM:     %u Kb\n", io_mem / 1024);
 	dbg_print("Total RAM:  %u Kb\n", ibm_pc->config.total_memory / 1024);
 
 	MEMORY_REGION* region = memory_map_get_mregion(&ibm_pc->mm, ibm_pc->ram_mregion_index);
@@ -237,13 +258,13 @@ void ibm_pc_set_config(void) {
 }
 
 /* I8086 Callbacks */
-uint8_t read_mm_byte(uint20_t addr) {
+static uint8_t read_mm_byte(uint20_t addr) {
 	return memory_map_read_byte(&ibm_pc->mm, addr);
 }
-void write_mm_byte(uint20_t addr, uint8_t value) {
+static void write_mm_byte(uint20_t addr, uint8_t value) {
 	memory_map_write_byte(&ibm_pc->mm, addr, value);
 }
-uint8_t read_io_byte(uint16_t port) {
+static uint8_t read_io_byte(uint16_t port) {
 	
 	uint8_t v = 0;
 	if (isa_bus_read_io_byte(&ibm_pc->isa_bus, port, &v)) {
@@ -305,7 +326,7 @@ uint8_t read_io_byte(uint16_t port) {
 	}
 	return 0xFF;
 }
-void write_io_byte(uint16_t port, uint8_t value) {
+static void write_io_byte(uint16_t port, uint8_t value) {
 	
 	if (isa_bus_write_io_byte(&ibm_pc->isa_bus, port, value)) {
 		return;
@@ -369,16 +390,16 @@ void write_io_byte(uint16_t port, uint8_t value) {
 			break;
 	}
 }
-uint16_t read_io_word(uint16_t port) {
+static uint16_t read_io_word(uint16_t port) {
 	return (read_io_byte(port) | (read_io_byte(port + 1) << 8));
 }
-void write_io_word(uint16_t port, uint16_t value) {
+static void write_io_word(uint16_t port, uint16_t value) {
 	write_io_byte(port, value & 0xFF);
 	write_io_byte(port+1, (value >> 8) & 0xFF);
 }
 
 /* PPI Callbacks */
-uint8_t ppi_port_a_read(I8255_PPI* ppi) {
+static uint8_t ppi_port_a_read(I8255_PPI* ppi) {
 	/* Port A (read keyboard input, system sw1) */
 	
 	if (ppi->port_b & PORTB_READ_SW1_KB) {
@@ -388,11 +409,11 @@ uint8_t ppi_port_a_read(I8255_PPI* ppi) {
 		return kbd_get_data(&ibm_pc->kbd);
 	}
 }
-uint8_t ppi_port_b_read(I8255_PPI* ppi) {
+static uint8_t ppi_port_b_read(I8255_PPI* ppi) {
 	//dbg_print("[PPI] portb read\n");
 	return ppi->port_b;
 }
-void ppi_port_b_write(I8255_PPI* ppi, uint8_t value) {
+static void ppi_port_b_write(I8255_PPI* ppi, uint8_t value) {
 	/* Port B (device control register)
 
 		PORTB-b7 0 enable keyboard read
@@ -435,7 +456,7 @@ void ppi_port_b_write(I8255_PPI* ppi, uint8_t value) {
 		kbd_set_enable(&ibm_pc->kbd, 1);
 	}
 }
-uint8_t ppi_port_c_read(I8255_PPI* ppi) {
+static uint8_t ppi_port_c_read(I8255_PPI* ppi) {
 	/* PORT C (device output register, read spare key, system sw2) */
 	
 	if (ppi->port_b & PORTB_CASSETTE_MOTOR_OFF) {
@@ -535,7 +556,6 @@ void i8086_deassert_intr(void) {
 	ibm_pc->cpu.intr_type = 0;
 }
 
-/* Kbd */
 static void kbd_update(void) {
 	const uint64_t cycle_target = 35400;
 	ibm_pc->kbd_accum += ibm_pc->cpu.cycles;
@@ -597,9 +617,10 @@ static void cpu_update(void) {
 	}
 	ibm_pc->cpu_cycles += ibm_pc->cpu.cycles;
 
-//#define bios5150_81
+//#define bios5150_24_04_81
+//#define bios5150_27_10_82
 
-#ifdef bios5150_81
+#ifdef bios5150_24_04_81
 	/* BIOS_5150_24APR81_U33.BIN */
 	switch ((ibm_pc->cpu.segments[1] << 4) + ibm_pc->cpu.ip) {
 
@@ -828,6 +849,27 @@ static void cpu_update(void) {
 			break;*/
 	}
 #endif
+
+#ifdef bios5150_27_10_82
+	/* BIOS_IBM5150_27OCT82_U33.BIN */
+	switch ((ibm_pc->cpu.segments[1] << 4) + ibm_pc->cpu.ip) {
+		case 0xFE4C3: /* EXPANSION ROM AA55 CHECK */
+			// ibm_pc->step = 1;
+			break;
+		case 0xFEC4F: /* ROS_CHECKSUM_COUNT start */
+			// ibm_pc->step = 1;
+			break;
+		case 0xFEC56: /* ROS_CHECKSUM_COUNT end */
+			// ibm_pc->step = 1;
+			break;
+		case 0xFE6A6: /* JUMP to EXPANSION ROM */
+			// ibm_pc->step = 1;
+			break;
+		case 0xC8003: /* */
+			// ibm_pc->step = 1;
+			break;
+	}
+#endif
 }
 
 void ibm_pc_update(void) {
@@ -905,15 +947,63 @@ void ibm_pc_reset(void) {
 	memory_map_set_writeable_region(&ibm_pc->mm, 0);
 }
 
-int ibm_pc_init(void) {
+void ibm_pc_add_rom(ROM* rom) {
+	void* new_roms = realloc(ibm_pc->config.roms, sizeof(ROM) * (ibm_pc->config.rom_count + 1));
+	if (new_roms == NULL) {
+		return;
+	}
+
+	memcpy((uint8_t*)new_roms + (sizeof(ROM) * ibm_pc->config.rom_count), rom, sizeof(ROM));
+	ibm_pc->config.roms = new_roms;
+	ibm_pc->config.rom_count++;
+}
+void ibm_pc_load_roms(void) {
+	if (ibm_pc->config.roms == NULL) {
+		return;
+	}
+	for (size_t i = 0; i < ibm_pc->config.rom_count; ++i) {
+		file_read_into_buffer(ibm_pc->config.roms[i].path, ibm_pc->mm.mem, MEM_SIZE, ibm_pc->config.roms[i].address, NULL, 0);
+	}
+}
+
+void ibm_pc_add_disk(DISK* disk) {
+	void* new_disks = realloc(ibm_pc->config.disks, sizeof(DISK) * (ibm_pc->config.disk_count + 1));
+	if (new_disks == NULL) {
+		return;
+	}
+
+	memcpy((uint8_t*)new_disks + (sizeof(DISK) * ibm_pc->config.disk_count), disk, sizeof(DISK));
+	ibm_pc->config.disks = new_disks;
+	ibm_pc->config.disk_count++;
+}
+void ibm_pc_load_disks(void) {
+	if (ibm_pc->config.disks == NULL) {
+		return;
+	}
+	for (int i = 0; i < ibm_pc->config.disk_count; ++i) {
+		if (ibm_pc->config.disks[i].path != '\0') {
+			uint8_t drive = 0;
+			char_to_drive(ibm_pc->config.disks[i].drive, &drive);
+			if (drive < FDD_MAX) {
+				fdd_eject_disk(&ibm_pc->fdc.fdd[drive]);
+				fdd_insert_disk(&ibm_pc->fdc.fdd[drive], ibm_pc->config.disks[i].path);
+				fdd_write_protect(&ibm_pc->fdc.fdd[drive], ibm_pc->config.disks[i].write_protect);
+			}
+		}
+	}
+}
+
+void ibm_pc_init(void) {
 	/* IBM PC Initialize */
 
 	/* Calculate planar ram and io ram */
-	cal_planar_io_ram_from_total();
+	uint20_t planar_ram = 0;
+	uint20_t io_ram = 0;
+	cal_planar_io_ram(ibm_pc->config.total_memory, &planar_ram, &io_ram);
 
 	/* Setup PC Config (system switches sw1, sw2)*/
-	ibm_pc_set_sw1();
-	ibm_pc_set_sw2();
+	ibm_pc_set_sw1(planar_ram);
+	ibm_pc_set_sw2(planar_ram, io_ram);
 
 	/* Setup 8086 CPU */
 	i8086_init(&ibm_pc->cpu);
@@ -986,10 +1076,25 @@ int ibm_pc_init(void) {
 	
 	ibm_pc_set_config();
 
+	/* Load ROMS */
+	ibm_pc_load_roms();
+
+	/* Load Disks */
+	ibm_pc_load_disks();
+
 	/* Setup timing; we base all timing off 60 HZ */
 	timing_init_frame(&ibm_pc->time, HZ_TO_MS(FRAME_RATE_HZ));
+}
 
-	return 0; /* success */
+void ibm_pc_destroy_config(void) {
+	if (ibm_pc->config.roms != NULL) {
+		free(ibm_pc->config.roms);
+		ibm_pc->config.roms = NULL;
+	}
+	if (ibm_pc->config.disks != NULL) {
+		free(ibm_pc->config.disks);
+		ibm_pc->config.disks = NULL;
+	}
 }
 
 int ibm_pc_create(void) {
@@ -1016,11 +1121,19 @@ int ibm_pc_create(void) {
 		return 1; /* upd765_fdc_create() reports errors to console */
 	}
 
+	/* Create kbd */
+	if (kbd_create(&ibm_pc->kbd)) {
+		return 1; /* kbd_create() reports errors to console */
+	}
+
 	return 0; /* success */
 }
 void ibm_pc_destroy(void) {
 	/* IBM PC Destroy */
 	if (ibm_pc != NULL) {
+
+		/* Destroy kbd */
+		kbd_destroy(&ibm_pc->kbd);
 
 		/* Destroy fdc */
 		upd765_fdc_destroy(&ibm_pc->fdc);
@@ -1030,6 +1143,9 @@ void ibm_pc_destroy(void) {
 
 		/* Destroy memory map */
 		memory_map_destroy(&ibm_pc->mm);
+
+		/* Destroy config */
+		ibm_pc_destroy_config();
 
 		free(ibm_pc);
 		ibm_pc = NULL;
