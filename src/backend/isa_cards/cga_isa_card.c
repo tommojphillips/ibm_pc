@@ -48,9 +48,9 @@ int isa_cga_read_io_byte(CGA* cga, uint16_t port, uint8_t* value) {
 }
 
 void isa_cga_update(CGA* cga, uint64_t cycles) {
-	/* cga cycles are ?/? of cpu cycles */
-	const uint64_t cycle_target = 4; // CPU cycles
-	const uint64_t cycle_factor = 5; // factor
+	/* cga cycles are 3/1 of cpu cycles */
+	const uint64_t cycle_target = 1; // CPU cycles
+	const uint64_t cycle_factor = 3; // factor
 
 	cga->accum += cycles * cycle_factor;
 	while (cga->accum >= cycle_target) {

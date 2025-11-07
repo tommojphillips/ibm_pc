@@ -47,7 +47,6 @@ int isa_mda_read_io_byte(MDA* mda, uint16_t port, uint8_t* value) {
 	return 0;
 }
 
-#if 0
 void isa_mda_update(MDA* mda, uint64_t cycles) {
 	/* mda cycles are ?/? of cpu cycles */
 	const uint64_t cycle_target = 4; // CPU cycles
@@ -58,7 +57,6 @@ void isa_mda_update(MDA* mda, uint64_t cycles) {
 		mda_update(mda);
 	}
 }
-#endif
 
 int isa_card_add_mda(ISA_BUS* bus, MDA* mda) {
 	/* MDA Card; VIDEO RAM - B0000 - B0FFF (0x1000 04K) mirrored up to 0xB7FFF (0x8000 32K) x8 */
@@ -67,6 +65,6 @@ int isa_card_add_mda(ISA_BUS* bus, MDA* mda) {
 	isa_card_add_param(bus, card, mda);
 	isa_card_add_io(bus, card, isa_mda_write_io_byte, isa_mda_read_io_byte);
 	isa_card_add_reset(bus, card, mda_reset);
-	//isa_card_add_update(bus, card, isa_mda_update);
+	isa_card_add_update(bus, card, isa_mda_update);
 	return card;
 }

@@ -50,8 +50,6 @@
 
 #define CGA_MODE_BLINK_ENABLE    0x20 /* If set, characters with attribute bit 7 set will blink. If not, they will have high intensity background <Text Mode> */
 
-#define CGA_MODE_CHANGED_MASK 0x13
-
 /* Text High Res */
 #define CGA_HI_RES_TEXT_WIDTH    640
 #define CGA_HI_RES_TEXT_HEIGHT   200
@@ -112,16 +110,14 @@
 
 /* CGA State */
 typedef struct CGA {
-	CRTC_6845 crtc;         /* cathode ray tube controller */
-	uint8_t status;         /* status register */
-	uint8_t mode;           /* mode control register */
-	uint8_t blink;          /* blink variable */
-	uint8_t color;          /* color control register */
-	uint16_t width;         /* display output width */
-	uint16_t height;        /* display output height */
-	uint16_t hcount;        /* horizontal pixel position */
-	uint16_t vcount;        /* vertical line position */
-	uint64_t accum;         /* cycle accum */
+	CRTC_6845 crtc;  /* cathode ray tube controller */
+	uint8_t status;  /* status register */
+	uint8_t mode;    /* mode control register */
+	uint8_t blink;   /* blink variable */
+	uint8_t color;   /* color control register */
+	uint16_t hcount; /* horizontal pixel position */
+	uint16_t vcount; /* vertical line position */
+	uint64_t accum;  /* cycle accum */
 } CGA;
 
 /* hard reset CGA */

@@ -18,17 +18,6 @@
 #define MDA_MODE_VIDEO_ENABLE 0x08
 #define MDA_MODE_BLINK_ENABLE 0x20
 
-#define MDA_MODE_CHANGED_MASK 0x01
-
-#define MDA_REG_CURSOR_START 0x0A
-#define MDA_REG_CURSOR_END   0x0B
-
-#define MDA_REG_ADDRESS_HI 0x0C
-#define MDA_REG_ADDRESS_LO 0x0D
-
-#define MDA_REG_CURSOR_HI 0x0E
-#define MDA_REG_CURSOR_LO 0x0F
-
 #define MDA_HI_RES_COLUMNS 80
 #define MDA_HI_RES_ROWS    25
 #define MDA_HI_RES_WIDTH   (720)
@@ -52,12 +41,14 @@
 
 /* MDA State */
 typedef struct MDA {
-	CRTC_6845 crtc;         /* cathode ray tube controller */
-	uint8_t status;         /* status register */
-	uint8_t mode;           /* mode control register */
-	uint8_t blink;          /* blink variable */
-	uint16_t width;         /* display width */
-	uint16_t height;        /* display height */
+	CRTC_6845 crtc;  /* cathode ray tube controller */
+	uint8_t status;  /* status register */
+	uint8_t mode;    /* mode control register */
+	uint8_t blink;   /* blink variable */
+	uint8_t color;   /* color control register */
+	uint16_t hcount; /* horizontal pixel position */
+	uint16_t vcount; /* vertical line position */
+	uint64_t accum;  /* cycle accum */
 } MDA;
 
 /* hard reset mda */
@@ -68,5 +59,8 @@ uint8_t mda_read_io_byte(MDA* mda, uint8_t io_address);
 
 /* MDA Write IO */
 void mda_write_io_byte(MDA* mda, uint8_t io_address, uint8_t value);
+
+/* MDA Update */
+void mda_update(MDA* mda);
 
 #endif
