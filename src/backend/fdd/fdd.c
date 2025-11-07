@@ -49,6 +49,28 @@ static int set_disk_descriptor(FDD_DISK_DESCRIPTOR* disk, size_t size) {
 	return FDD_INSERT_DISK_ERROR_UNK_FLOPPY;
 }
 
+int char_to_drive(char ch, uint8_t* disk) {
+	/* Convert A-Z, a-z to disk number */
+	if (ch >= 0 && ch <= 26) {
+		*disk = ch;
+	}
+	else if ((ch >= 'A' && ch <= 'Z')) {
+		*disk = ch - 'A';
+	}
+	else if (ch >= 'a' && ch <= 'z') {
+		*disk = ch - 'a';
+	}
+	else if (ch >= '0' && ch <= '9') {
+		*disk = ch - '0';
+	}
+	else {
+		*disk = 0;
+		return 1;
+	}
+
+	return 0;
+}
+
 int fdd_new_disk(FDD_DISK* fdd, uint32_t buffer_size) {
 
 	if (fdd->status.inserted) {
@@ -140,16 +162,12 @@ void fdd_eject_disk(FDD_DISK* fdd) {
 }
 void fdd_save_disk(FDD_DISK* fdd) {
 	if (fdd->status.inserted) {
-		FILE* f = NULL;
-		fopen_s(&f, fdd->path, "wb");
-		if (f != NULL) {
-			fwrite(fdd->buffer, fdd->buffer_size, 1, f);
-			fclose(f);
-			fdd->status.dirty = 0;
-			printf("[FDD] SAVE DISK: %s\n", fdd->path);
+		if (file_write_from_buffer(fdd->path, fdd->buffer, fdd->buffer_size)) {
+			printf("[FDD] FAILED TO SAVE DISK\n");
 		}
 		else {
-			printf("[FDD] FAILED TO SAVE DISK\n");
+			fdd->status.dirty = 0;
+			printf("[FDD] SAVE DISK: %s\n", fdd->path);
 		}
 	}
 }
@@ -158,6 +176,10 @@ void fdd_save_as_disk(FDD_DISK* fdd, const char* filename) {
 		strncpy_s(fdd->path, FDD_NAME_SIZE, filename, FDD_NAME_SIZE - 1);
 		fdd_save_disk(fdd);
 	}
+}
+
+void fdd_write_protect(FDD_DISK* fdd, uint8_t write_protect) {
+	fdd->status.write_protect = write_protect;
 }
 
 uint8_t fdd_read_byte(FDD_DISK* fdd, size_t offset) {
