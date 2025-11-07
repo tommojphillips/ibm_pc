@@ -14,20 +14,6 @@
 #include "backend/ibm_pc.h"
 #include "backend/ring_buffer.h"
 
-void sdl_input_reset_input(void) {
-	ring_buffer_reset(&sdl->key_state);
-}
-int sdl_input_has_input(void) {
-	return (!ring_buffer_is_empty(&sdl->key_state));
-}
-uint8_t sdl_input_get_input(void) {
-	return ring_buffer_pop(&sdl->key_state);
-}
-void sdl_input_set_input(uint8_t v) {
-	ring_buffer_push(&sdl->key_state, v);
-}
-
-
 static void check_keys(WINDOW_INSTANCE* instance, SDL_Event* e) {
 
 	switch (e->key.scancode) {
@@ -76,10 +62,10 @@ static void check_keys(WINDOW_INSTANCE* instance, SDL_Event* e) {
 	}
 
 	if (e->key.down) {
-		sdl_input_set_input(pc_scancode[e->key.scancode]);
+		ring_buffer_push(&ibm_pc->kbd.key_buffer, pc_scancode[e->key.scancode]);
 	}
 	else {
-		sdl_input_set_input(pc_scancode[e->key.scancode] | 0x80);
+		ring_buffer_push(&ibm_pc->kbd.key_buffer, pc_scancode[e->key.scancode] | 0x80);
 	}
 }
 

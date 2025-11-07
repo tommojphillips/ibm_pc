@@ -6,12 +6,22 @@
 #include "keyboard.h"
 
 #include "timing.h"
-#include "input.h"
+#include "backend/ring_buffer.h"
+
+#define KEYS_SIZE 10
+
+#define DBG_PRINT
+#ifdef DBG_PRINT
+#include <stdio.h>
+#define dbg_print(x, ...) printf(x, __VA_ARGS__)
+#else
+#define dbg_print(x, ...)
+#endif
 
 static void reset_check(KBD* kbd) {
 	if (kbd->do_reset) {
 		kbd->do_reset = 0;
-		input_reset_input();
+		ring_buffer_reset(&kbd->key_buffer);
 		kbd->data = 0xAA;
 		kbd->request_irq(kbd);
 	}
@@ -22,7 +32,7 @@ void kbd_reset(KBD* kbd) {
 	kbd->enabled = 0;
 	kbd->reset_elapsed = timing_get_ticks_ms();
 	kbd->data = 0;
-	input_reset_input();
+	ring_buffer_reset(&kbd->key_buffer);
 }
 
 uint8_t kbd_get_data(KBD* kbd) {
@@ -56,8 +66,20 @@ void kbd_set_clk(KBD* kbd, uint8_t clk) {
 
 void kbd_tick(KBD* kbd) {
 	reset_check(kbd);
-	if (kbd->enabled && input_has_input()) {
-		kbd->data = input_get_input();
+	if (kbd->enabled && !ring_buffer_is_empty(&kbd->key_buffer)) {
+		kbd->data = ring_buffer_pop(&kbd->key_buffer);
 		kbd->request_irq(kbd);
 	}
+}
+
+int kbd_create(KBD* kbd) {
+	if (ring_buffer_create(&kbd->key_buffer, KEYS_SIZE)) {
+		dbg_print("[KBD] Failed to allocate key buffer\n");
+		return 1;
+	}
+	return 0;
+}
+
+void kbd_destroy(KBD* kbd) {
+	ring_buffer_destroy(&kbd->key_buffer);
 }
