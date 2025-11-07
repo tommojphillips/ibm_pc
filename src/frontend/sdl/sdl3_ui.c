@@ -5,14 +5,14 @@
 #include "sdl3_window.h"
 #include "sdl3_display.h"
 #include "sdl3_keys.h"
+#include "sdl3_ui.h"
 
 #include "ui.h"
 
 #include "backend/ibm_pc.h"
 #include "backend/fdd/fdd.h"
+#include "backend/ring_buffer.h"
 #include "frontend/utility/file.h"
-
-#include "backend/input.h"
 
 static void insert_disk(FDD_DISK* fdd, const char* const* filelist, int filter) {
 	(void)filter;
@@ -111,23 +111,57 @@ static void draw_display_submenu(DISPLAY_INSTANCE* display) {
 		ui_end_menu();
 	}
 	
-	if (ui_begin_menu("Scale Mode")) {
+	if (ui_begin_menu("Texture Scale Mode")) {
 
-		sel = display->scale_mode == SDL_SCALEMODE_NEAREST;
+		sel = display->config.texture_scale_mode == SDL_SCALEMODE_NEAREST;
 		if (ui_menu_button("Nearest", sel, 1)) {
-			display->scale_mode = SDL_SCALEMODE_NEAREST;
+			display->config.texture_scale_mode = SDL_SCALEMODE_NEAREST;
 		}
 
-		sel = display->scale_mode == SDL_SCALEMODE_LINEAR;
+		sel = display->config.texture_scale_mode == SDL_SCALEMODE_LINEAR;
 		if (ui_menu_button("Linear", sel, 1)) {
-			display->scale_mode = SDL_SCALEMODE_LINEAR;
+			display->config.texture_scale_mode = SDL_SCALEMODE_LINEAR;
 		}
 
 		ui_end_menu();
 	}
 
-	ui_menu_checkbox("Scanline Emulation", &display->scanline_emu);
-	ui_menu_checkbox("Correct Aspect Ratio", &display->correct_aspect_ratio);
+	if (ui_begin_menu("Display Scale Mode")) {
+
+		sel = display->config.display_scale_mode == DISPLAY_SCALE_FIT;
+		if (ui_menu_button("Fit", sel, 1)) {
+			display->config.display_scale_mode = DISPLAY_SCALE_FIT;
+		}
+
+		sel = display->config.display_scale_mode == DISPLAY_SCALE_STRETCH;
+		if (ui_menu_button("Stretch", sel, 1)) {
+			display->config.display_scale_mode = DISPLAY_SCALE_STRETCH;
+		}
+
+		ui_end_menu();
+	}
+
+	if (ui_begin_menu("Display View Mode")) {
+
+		sel = display->config.display_view_mode == DISPLAY_VIEW_CROPPED;
+		if (ui_menu_button("Cropped", sel, 1)) {
+			display->config.display_view_mode = DISPLAY_VIEW_CROPPED;
+		}
+
+		sel = display->config.display_view_mode == DISPLAY_VIEW_FULL;
+		if (ui_menu_button("Full", sel, 1)) {
+			display->config.display_view_mode = DISPLAY_VIEW_FULL;
+		}
+
+		ui_end_menu();
+	}
+
+	ui_menu_checkbox("Scanline Emulation", &display->config.scanline_emu);
+
+	sel = display->config.display_scale_mode == DISPLAY_SCALE_FIT;
+	if (ui_menu_button("Correct Aspect Ratio", display->config.correct_aspect_ratio, sel)) {
+		display->config.correct_aspect_ratio ^= 1;
+	}
 	
 	sel = window_instance_is_full_screen(display->window);
 	if (ui_menu_button("Full Screen", sel, 1)) {
@@ -393,20 +427,19 @@ static void draw_dipswitch_submenu(void) {
 	ui_text("Total RAM:  %u KB", planar_ram + io_ram);
 }
 
-static void draw_main_menu(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display) {
+static void draw_main_menu(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	display->offset_y = 0;
 
 	// Auto-hiding main menu bar with slide animation
-	static float menu_slide = 0.0f; // 1 = visible, 0 = hidden
 
 	// Menu bar height
 	float menu_height = ui_get_text_line_height() + (ui_get_frame_padding().y * 2);
 
 	float mx, my;
 	SDL_GetGlobalMouseState(&mx, &my);
-	WINDOW_TRANSFORM t = instance->transform;
+	WINDOW_TRANSFORM t = display->window->transform;
 
-	SDL_WindowFlags flags = SDL_GetWindowFlags(instance->window);
+	SDL_WindowFlags flags = SDL_GetWindowFlags(display->window->window);
 	
 	int inside_window = mx >= t.x && mx < t.x + t.w && my >= t.y - 5 && my < t.y + t.h;
 	int near_top = (my >= t.y - 5 && my <= t.y + menu_height + 5);
@@ -418,23 +451,26 @@ static void draw_main_menu(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display)
 
 	// Target visibility
 	float target = (hovering || menu_open) ? 1.0f : 0.0f;
-	menu_slide = ui_lerp(menu_slide, target, ui_get_delta_time() * 8.0f);
+	ui_context->menu_slide = ui_lerp(ui_context->menu_slide, target, ui_get_delta_time() * 7.0f);
 
-	if (menu_slide < 0.05f) {
-		menu_slide = 0.0f;
+	if (ui_context->menu_slide <= 0.005f) {
+		ui_context->menu_slide = 0.0f;
+		ui_context->slide_offset = -menu_height;
 		// Exit early if menu slide is 0.
 		return;
 	}
+	
+	// Apply slide offset from the LAST frame.
+	ui_set_next_window_position(0, ui_context->slide_offset);
+	ui_set_next_window_size((float)display->window->transform.w, menu_height);
+
+	// We compute the slide offset for the NEXT frame. Delay by 1 frame so the display has time to catch up.
 
 	// Compute vertical offset for slide-out;
-	float slide_offset = (-menu_height * (1.0f - menu_slide));
-
+	ui_context->slide_offset = (-menu_height * (1.0f - ui_context->menu_slide));
+	
 	// Compute display offset height
-	display->offset_y = menu_height + slide_offset;
-		
-	// Apply position + size
-	ui_set_next_window_position(0, slide_offset);
-	ui_set_next_window_size((float)instance->transform.w, menu_height);
+	display->offset_y = menu_height + ui_context->slide_offset;
 
 	ui_push_style_color(UI_COLOR_Button, 0, 0, 0, 0);
 	ui_push_style_color(UI_COLOR_FrameBg, 0, 0, 0, .25f);
@@ -452,13 +488,13 @@ static void draw_main_menu(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display)
 				ibm_pc_reset();
 			}
 			if (ui_menu_item("Ctrl-Alt-Del")) {
-				input_set_input(pc_scancode[SDL_SCANCODE_LCTRL]);
-				input_set_input(pc_scancode[SDL_SCANCODE_LALT]);
-				input_set_input(pc_scancode[SDL_SCANCODE_DELETE]);
+				ring_buffer_push(&ibm_pc->kbd.key_buffer, pc_scancode[SDL_SCANCODE_LCTRL]);
+				ring_buffer_push(&ibm_pc->kbd.key_buffer, pc_scancode[SDL_SCANCODE_LALT]);
+				ring_buffer_push(&ibm_pc->kbd.key_buffer, pc_scancode[SDL_SCANCODE_DELETE]);
 			}
 			if (ui_menu_item("Exit")) {
-				window_instance_close(instance);
-				window_instance_destroy(instance);
+				window_instance_close(display->window);
+				window_instance_destroy(display->window);
 			}
 			ui_end_menu();
 		}
@@ -469,25 +505,25 @@ static void draw_main_menu(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display)
 			}
 			if (ibm_pc->config.fdc_disks >= 1) {
 				if (ui_begin_menu("A:")) {
-					draw_disk_submenu(instance, 0);
+					draw_disk_submenu(display->window, 0);
 					ui_end_menu();
 				}
 			}
 			if (ibm_pc->config.fdc_disks >= 2) {
 				if (ui_begin_menu("B:")) {
-					draw_disk_submenu(instance, 1);
+					draw_disk_submenu(display->window, 1);
 					ui_end_menu();
 				}
 			}
 			if (ibm_pc->config.fdc_disks >= 3) {
 				if (ui_begin_menu("C:")) {
-					draw_disk_submenu(instance, 2);
+					draw_disk_submenu(display->window, 2);
 					ui_end_menu();
 				}
 			}
 			if (ibm_pc->config.fdc_disks >= 4) {
 				if (ui_begin_menu("D:")) {
-					draw_disk_submenu(instance, 3);
+					draw_disk_submenu(display->window, 3);
 					ui_end_menu();
 				}
 			}
@@ -513,8 +549,8 @@ static void draw_main_menu(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display)
 	ui_pop_style_color(2);
 }
 
-void ui_update(WINDOW_INSTANCE* instance, DISPLAY_INSTANCE* display) {
+void ui_update(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	ui_new_frame();
-	draw_main_menu(instance, display);
+	draw_main_menu(ui_context, display);
 	ui_render();
 }
