@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "file.h"
 
@@ -16,24 +17,25 @@
 #endif
 
 #define file_tell  ftell
-#define file_open  fopen_s
+#define file_open  fopen
 #define file_close fclose
 #define file_seek  fseek
 #define file_read  fread
 #define file_write fwrite
 #define file_t     FILE
 
-int file_read_into_buffer(const char* filename, void* buff, const size_t buff_size, const size_t offset, size_t* file_size, const size_t expected_size) {
+int file_read_into_buffer(const char* path, void* buff, const size_t buff_size, const size_t offset, size_t* file_size, const size_t expected_size) {
 	file_t* file = NULL;
 	size_t size = 0;
-	if (filename == NULL) {
-		dbg_print("Error: filename was null: %s\n", filename);
+
+	if (path == NULL) {
+		dbg_print("Error: path was null: %s\n", path);
 		return 1;
 	}
 
-	file_open(&file, filename, "rb");
+	file = file_open(path, "rb");
 	if (file == NULL) {
-		dbg_print("Error: could not open file: %s\n", filename);
+		dbg_print("Error: could not open file: %s\n", path);
 		return 1;
 	}
 
@@ -58,23 +60,24 @@ int file_read_into_buffer(const char* filename, void* buff, const size_t buff_si
 	}
 
 	size_t bytes_read = file_read((uint8_t*)buff + offset, 1, size, file);
-	dbg_print("0x%05zX -> %s (%zu bytes)\n", offset, filename, bytes_read);
+	dbg_print("0x%05zX -> %s (%zu bytes)\n", offset, path, bytes_read);
 	file_close(file);
 	file = NULL;
 	return 0;
 }
 
-int file_read_alloc_buffer(const char* filename, void** buff, size_t* file_size) {
+int file_read_alloc_buffer(const char* path, void** buff, size_t* file_size) {
 	file_t* file = NULL;
 	size_t size = 0;
-	if (filename == NULL) {
-		dbg_print("Error: filename was null: %s\n", filename);
+
+	if (path == NULL) {
+		dbg_print("Error: path was null: %s\n", path);
 		return 1;
 	}
 
-	file_open(&file, filename, "rb");
+	file = file_open(path, "rb");
 	if (file == NULL) {
-		dbg_print("Error: could not open file: %s\n", filename);
+		dbg_print("Error: could not open file: %s\n", path);
 		return 1;
 	}
 
@@ -88,11 +91,31 @@ int file_read_alloc_buffer(const char* filename, void** buff, size_t* file_size)
 
 	*buff = calloc(1, size);
 	if (*buff == NULL) {
-		dbg_print("Error: could not alloc memory for file: %s\n", filename);
+		dbg_print("Error: could not alloc memory for file: %s\n", path);
 		return 1;
 	}
 
 	file_read(*buff, 1, size, file);
+	file_close(file);
+	file = NULL;
+	return 0;
+}
+
+int file_write_from_buffer(const char* path, void* buff, const size_t buff_size) {
+	file_t* file = NULL;
+
+	if (path == NULL) {
+		dbg_print("Error: path was null: %s\n", path);
+		return 1;
+	}
+
+	file = file_open(path, "wb");
+	if (file == NULL) {
+		dbg_print("Error: could not open file: %s\n", path);
+		return 1;
+	}
+
+	file_write(buff, buff_size, 1, file);
 	file_close(file);
 	file = NULL;
 	return 0;
@@ -107,4 +130,14 @@ const char* file_get_filename(const char* path) {
 		return filename ? filename + 1 : path;
 	}
 	return NULL;
+}
+
+int file_get_file_size(const char* path, size_t* file_size) {
+	struct stat st;
+	if (stat(path, &st) != 0) {
+		*file_size = 0;
+		return 0;
+	}
+	*file_size = st.st_size;
+	return 1;
 }
