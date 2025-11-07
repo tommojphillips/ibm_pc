@@ -62,14 +62,14 @@ static void assert_intr(I8259_PIC* pic, uint8_t irq) {
 }
 
 static void icw1(I8259_PIC* pic, uint8_t value) {
-	/* ICW1 intiitalization */
+	/* ICW1 intitalization */
 	pic->deassert_intr();
 	i8259_pic_reset(pic);
 	pic->icw[pic->icw_index++] = value;
 	dbg_print("[PIC] ICW1 = %02X\n", value);
 }
 static void icwx(I8259_PIC* pic, uint8_t value) {
-	/* ICW[2/3/4] intiitalization */
+	/* ICW[2/3/4] intitalization */
 
 	dbg_print("[PIC] ICW%d = %02X\n", pic->icw_index + 1, value);
 
@@ -117,11 +117,9 @@ static void ocw1(I8259_PIC* pic, uint8_t value) {
 }
 static void ocw2(I8259_PIC* pic, uint8_t value) {
 	/* OCW2 */
-	uint8_t eoi = 0;
 	switch (value & OCW2_OP_MASK) {
 		case OCW2_EOI: {
 			/* Clear highest priority IR */
-			eoi = 1;
 			uint8_t ir = highest_priority_bit(pic->isr);
 			if (ir != 0xFF) {
 				pic->isr &= ~(1 << ir);
@@ -131,7 +129,6 @@ static void ocw2(I8259_PIC* pic, uint8_t value) {
 
 		case OCW2_EOI_SPEC: {
 			/* Clear specific IR */
-			eoi = 1;
 			pic->isr &= ~(1 << (value & 0x07));
 			dbg_print("[PIC] EOI_SPEC %d\n", (value & 0x7));
 		} break;
@@ -184,20 +181,16 @@ uint8_t i8259_pic_read_io_byte(I8259_PIC* pic, uint8_t io_address) {
 	switch (io_address & 0x1) {
 		case 0x0:
 			return command_read(pic);
-
-		default:
 		case 0x1:
 			return data_read(pic);			
 	}
+	return 0;
 }
-
 void i8259_pic_write_io_byte(I8259_PIC* pic, uint8_t io_address, uint8_t value) {
 	switch (io_address & 0x1) {
 		case 0x0:
 			command_write(pic, value);
 			break;
-
-		default:
 		case 0x1:
 			data_write(pic, value);
 			break;
@@ -207,17 +200,18 @@ void i8259_pic_write_io_byte(I8259_PIC* pic, uint8_t io_address, uint8_t value) 
 void i8259_pic_clear_interrupt(I8259_PIC* pic, uint8_t irq) {
 	if (pic->initialized) {
 		uint8_t mask = (1 << (irq & 0x07));
-		pic->irr &= ~mask;
-		pic->isr &= ~mask;
 
-		/* Determine highest-priority active ISR */
-		uint8_t highest_isr = highest_priority_bit(pic->isr);
+		/* Determine highest priority ISR */
+		uint8_t highest_irq = highest_priority_bit(pic->isr);
 
 		/* Deassert INTR if IR is in service and IR has highest priority */
-		if ((irq & 0x07) == highest_isr) {
+		if ((irq & 0x07) == highest_irq) {
 			pic->deassert_intr();
 			dbg_print("[PIC] Deasserted INTR (%d)\n", irq);
 		}
+
+		pic->irr &= ~mask;
+		pic->isr &= ~mask; /* Should we be clearing ISR? if the CPU is currently servicing the INT, and sends an EOI to the PIC it could EOI a different IRQ. */
 	}
 }
 
@@ -244,19 +238,18 @@ int i8259_pic_get_interrupt(I8259_PIC* pic) {
 
 	uint8_t mask = 1 << irq;
 
-	/* Move the bit from IRR to ISR if not in Auto-EOI mode */
+	/* Set the bit in ISR if not in Auto-EOI mode */
 	if (!(pic->icw[3] & ICW4_AEOI)) { 
 		pic->isr |= mask;
 	}
 
-	/* Clear IRR if in Edge-Triggered mode */
+	/* Clear the bit in IRR if in Edge-Triggered mode */
 	if (!(pic->icw[0] & ICW1_LTIM)) {
 		pic->irr &= ~mask;
 	}
 
 	/* Assert INTR */
 	assert_intr(pic, irq);
-	dbg_print("[PIC] IRQ %d -> INTR asserted\n", irq);
 	return 1;
 }
 
