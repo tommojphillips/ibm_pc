@@ -74,7 +74,12 @@ static void print_video_adapter(WINDOW_INSTANCE* instance, DBG_GUI* gui, float x
 	}
 	else if (ibm_pc->config.video_adapter == VIDEO_ADAPTER_CGA_80X25 || ibm_pc->config.video_adapter == VIDEO_ADAPTER_CGA_40X25) {
 		if (ibm_pc->cga.mode & CGA_MODE_GRAPHICS) {
-			sprintf(gui->str, "CGA Graphics %dx%d", ibm_pc->cga.width, ibm_pc->cga.height);
+			if (ibm_pc->cga.mode & CGA_MODE_GRAPHICS_RES_HI) {
+				sprintf(gui->str, "CGA Graphics 640x200");
+			}
+			else {
+				sprintf(gui->str, "CGA Graphics 320x200");
+			}
 		}
 		else {
 			sprintf(gui->str, "CGA %dx%d", ibm_pc->cga.crtc.hdisp, ibm_pc->cga.crtc.vdisp);
@@ -123,7 +128,7 @@ void dbg_gui_render(WINDOW_INSTANCE* instance, DBG_GUI* gui) {
 
 	// print cpu registers/instuction
 	uint16_t ip = ibm_pc->cpu.ip;
-	for (int i = 0; i < 5; ++i) {
+	for (int i = 0; i < 10; ++i) {
 		i8086_mnem_at(&ibm_pc->mnem, ibm_pc->cpu.segments[SEG_CS], ip);
 		sprintf(gui->str, "%04X.%04X: %s", ibm_pc->mnem.segment, ip, ibm_pc->mnem.str);
 		SDL_RenderDebugText(instance->renderer, 10.0f, h, gui->str);
@@ -280,7 +285,7 @@ void dbg_gui_render(WINDOW_INSTANCE* instance, DBG_GUI* gui) {
 #if 1
 	int i = 0;
 	uint8_t c = 0;
-	while (ring_buffer_peek(&sdl->key_state, i, &c) == 0) {
+	while (ring_buffer_peek(&ibm_pc->kbd.key_buffer, i, &c) == 0) {
 		sprintf(gui->str, "(%x) KEY: %02X", i, c);
 		i++;
 		SDL_RenderDebugText(instance->renderer, 10.0f, h, gui->str);
@@ -288,7 +293,7 @@ void dbg_gui_render(WINDOW_INSTANCE* instance, DBG_GUI* gui) {
 	}
 
 	h += 5;
-	sprintf(gui->str, "Tail: %d, Head: %d, Count: %d ", sdl->key_state.tail, sdl->key_state.head, sdl->key_state.count);
+	sprintf(gui->str, "Tail: %d, Head: %d, Count: %d ", ibm_pc->kbd.key_buffer.tail, ibm_pc->kbd.key_buffer.head, ibm_pc->kbd.key_buffer.count);
 	SDL_RenderDebugText(instance->renderer, 10.0f, h, gui->str); 
 	h += 15;
 #endif
