@@ -9,8 +9,9 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL.h>
 
+#include "tomi.h"
+
 #include "frontend/utility/file.h"
-#include "frontend/loadini/loadini.h"
 
 #include "frontend/sdl/sdl3_common.h"
 #include "frontend/sdl/sdl3_window.h"
@@ -37,7 +38,7 @@ int main(int argc, char** argv) {
 	WINDOW_MANAGER* window_manager = NULL;
 	WINDOW_INSTANCE* win1 = NULL;
 	DISPLAY_INSTANCE* display = NULL;
-	LOADINI_VAR* var_map = NULL;
+	TOMI_VAR* var_map = NULL;
 	
 	UI_CONTEXT ui_context = { 0 };
 	DBG_GUI dbg_gui = { 0 };

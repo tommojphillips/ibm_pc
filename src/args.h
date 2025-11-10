@@ -7,7 +7,7 @@
 
 typedef struct IBM_PC_CONFIG IBM_PC_CONFIG;
 typedef struct DISPLAY_CONFIG DISPLAY_CONFIG;
-typedef struct LOADINI_VAR LOADINI_VAR;
+typedef struct TOMI_VAR TOMI_VAR;
 
 typedef struct ARGS {
 	const char* config_filename;
@@ -19,9 +19,9 @@ typedef struct ARGS {
 void args_set_default(ARGS* args);
 int args_parse_cli(int argc, char** argv, ARGS* args);
 int args_parse_cli_for_config_file(int argc, char** argv, ARGS* args);
-int args_parse_ini(LOADINI_VAR* var_map, ARGS* args);
+int args_parse_ini(TOMI_VAR* var_map, ARGS* args);
 
-int args_create(LOADINI_VAR** var_map);
-void args_destroy(LOADINI_VAR* var_map);
+int args_create(TOMI_VAR** var_map);
+void args_destroy(TOMI_VAR* var_map);
 
 #endif

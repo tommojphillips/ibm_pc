@@ -10,84 +10,84 @@
 
 #include "args.h"
 
+#include "tomi.h"
 #include "frontend/utility/file.h"
-#include "frontend/loadini/loadini.h"
 #include "frontend/sdl/sdl3_display.h"
 
 #include "backend/ibm_pc.h"
 
-static const LOADINI_ENUM model_def[] = {
+static const TOMI_ENUM model_def[] = {
 	{ "5150_16_64",  MODEL_5150_16_64 },
 	{ "5150_64_256", MODEL_5150_64_256 },
 };
 
-static const LOADINI_ENUM video_adapter_def[] = {
+static const TOMI_ENUM video_adapter_def[] = {
 	{ "MDA",   VIDEO_ADAPTER_MDA_80X25 },
 	{ "CGA",   VIDEO_ADAPTER_CGA_80X25 },
 	{ "CGA80", VIDEO_ADAPTER_CGA_80X25 },
 	{ "CGA40", VIDEO_ADAPTER_CGA_40X25 },
 };
 
-static const LOADINI_ENUM texture_scale_def[] = {
+static const TOMI_ENUM texture_scale_def[] = {
 	{ "Nearest", SDL_SCALEMODE_NEAREST },
 	{ "Linear",  SDL_SCALEMODE_LINEAR  },
 };
 
-static const LOADINI_ENUM display_scale_def[] = {
+static const TOMI_ENUM display_scale_def[] = {
 	{ "Fit",     DISPLAY_SCALE_FIT     },
 	{ "Stretch", DISPLAY_SCALE_STRETCH },
 };
 
-static const LOADINI_ENUM display_view_def[] = {
+static const TOMI_ENUM display_view_def[] = {
 	{ "Cropped", DISPLAY_SCALE_FIT     },
 	{ "Full",    DISPLAY_SCALE_STRETCH },
 };
 
-static const LOADINI_FIELD rom_fields[] = {
-	LOADINI_FIELD_STR("path", ROM, path),
-	LOADINI_FIELD_U32("address", ROM, address)
+static const TOMI_FIELD rom_fields[] = {
+	TOMI_FIELD_STR("path", ROM, path),
+	TOMI_FIELD_U32("address", ROM, address)
 };
 
-static const LOADINI_STRUCT rom_def = {
-	LOADINI_STRUCT_DEF(rom_fields, ROM)
+static const TOMI_STRUCT rom_def = {
+	TOMI_STRUCT_DEF(rom_fields, ROM)
 };
 
-static const LOADINI_FIELD disk_fields[] = {
-	LOADINI_FIELD_STR("path", DISK, path),
-	LOADINI_FIELD_U8("drive", DISK, drive),
-	LOADINI_FIELD_U8("write_protect", DISK, write_protect)
+static const TOMI_FIELD disk_fields[] = {
+	TOMI_FIELD_STR("path", DISK, path),
+	TOMI_FIELD_U8("drive", DISK, drive),
+	TOMI_FIELD_U8("write_protect", DISK, write_protect)
 };
 
-static const LOADINI_STRUCT disk_def = {
-	LOADINI_STRUCT_DEF(disk_fields, DISK)
+static const TOMI_STRUCT disk_def = {
+	TOMI_STRUCT_DEF(disk_fields, DISK)
 };
 
-static const LOADINI_SETTING setting_map[] = {
-	LOADINI_SETTING_BOOL("dbg_ui"),
+static const TOMI_SETTING setting_map[] = {
+	TOMI_SETTING_BOOL("dbg_ui"),
 
 	/* IBM PC */
-	LOADINI_SETTING_ENUM("model", model_def),
-	LOADINI_SETTING_ENUM("video_adapter", video_adapter_def),
-	LOADINI_SETTING_U32("conventional_ram"),
-	LOADINI_SETTING_U8("num_floppies"),
-	LOADINI_SETTING_U8("sw1_override"),
-	LOADINI_SETTING_U8("sw2_override"),
-	LOADINI_SETTING_U8("sw1"),
-	LOADINI_SETTING_U8("sw2"),
-	LOADINI_SETTING_STRUCT_ARRAY("disk", IBM_PC_CONFIG, &disk_def, disks, disk_count),
-	LOADINI_SETTING_STRUCT_ARRAY("rom", IBM_PC_CONFIG, &rom_def, roms, rom_count),
+	TOMI_SETTING_ENUM_U8("model", model_def),
+	TOMI_SETTING_ENUM_U8("video_adapter", video_adapter_def),
+	TOMI_SETTING_U32("conventional_ram"),
+	TOMI_SETTING_U8("num_floppies"),
+	TOMI_SETTING_U8("sw1_override"),
+	TOMI_SETTING_U8("sw2_override"),
+	TOMI_SETTING_U8("sw1"),
+	TOMI_SETTING_U8("sw2"),
+	TOMI_SETTING_STRUCT_ARRAY("disk", IBM_PC_CONFIG, &disk_def, disks, disk_count),
+	TOMI_SETTING_STRUCT_ARRAY("rom", IBM_PC_CONFIG, &rom_def, roms, rom_count),
 
 	/* DISPLAY */
-	LOADINI_SETTING_ENUM("texture_scale_mode", texture_scale_def),
-	LOADINI_SETTING_ENUM("display_scale_mode", display_scale_def),
-	LOADINI_SETTING_ENUM("display_view_mode", display_view_def),
-	LOADINI_SETTING_BOOL("correct_aspect_ratio"),
-	LOADINI_SETTING_BOOL("emulate_max_scanline"),
-	LOADINI_SETTING_STRING("mda_font", FONT_PATH_LEN),
-	LOADINI_SETTING_STRING("cga_font", FONT_PATH_LEN),
+	TOMI_SETTING_ENUM_U8("texture_scale_mode", texture_scale_def),
+	TOMI_SETTING_ENUM_U8("display_scale_mode", display_scale_def),
+	TOMI_SETTING_ENUM_U8("display_view_mode", display_view_def),
+	TOMI_SETTING_BOOL("correct_aspect_ratio"),
+	TOMI_SETTING_BOOL("emulate_max_scanline"),
+	TOMI_SETTING_STR("mda_font", TOMI_FIELD_SIZE(DISPLAY_CONFIG, mda_font)),
+	TOMI_SETTING_STR("cga_font", TOMI_FIELD_SIZE(DISPLAY_CONFIG, cga_font)),
 };
 
-static const int settings_map_count = LOADINI_ARRAY_COUNT(LOADINI_SETTING, setting_map);
+static const int settings_map_count = TOMI_ARRAY_COUNT(TOMI_SETTING, setting_map);
 
 static int next_arg(int argc, char** argv, int* i, const char** arg) {
 	(*i)++;
@@ -417,7 +417,7 @@ int args_parse_cli_for_config_file(int argc, char** argv, ARGS* args) {
 	return 0; /* no error */
 }
 
-int args_parse_ini(LOADINI_VAR* var_map, ARGS* args) {
+int args_parse_ini(TOMI_VAR* var_map, ARGS* args) {
 	int i = 0;
 
 	#define set_var(address) (var_map[i++].var = address)
@@ -443,14 +443,14 @@ int args_parse_ini(LOADINI_VAR* var_map, ARGS* args) {
 	set_var(&args->display_config->mda_font);
 	set_var(&args->display_config->cga_font);
 
-	if (loadini_load_from_file(args->config_filename, setting_map, var_map, settings_map_count) != LOADINI_ERROR_SUCCESS) {
+	if (tomi_load_from_file(args->config_filename, setting_map, var_map, settings_map_count) != TOMI_ERROR_SUCCESS) {
 		return 1;
 	}
 	return 0;
 }
 
-int args_create(LOADINI_VAR** var_map) {
-	if (loadini_create_var_map(var_map, settings_map_count) != LOADINI_ERROR_SUCCESS) {
+int args_create(TOMI_VAR** var_map) {
+	if (tomi_create_var_map(var_map, settings_map_count) != TOMI_ERROR_SUCCESS) {
 		return 1;
 	}
 	else {
@@ -458,7 +458,7 @@ int args_create(LOADINI_VAR** var_map) {
 	}
 }
 
-void args_destroy(LOADINI_VAR* var_map) {
-	loadini_save_to_file("output.ini", setting_map, var_map, settings_map_count);
-	loadini_destroy_var_map(setting_map, var_map, settings_map_count);
+void args_destroy(TOMI_VAR* var_map) {
+	tomi_save_to_file("output.ini", setting_map, var_map, settings_map_count);
+	tomi_destroy_var_map(setting_map, var_map, settings_map_count);
 }

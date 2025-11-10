@@ -35,8 +35,8 @@
     <Filter Include="backend\isa_cards">
       <UniqueIdentifier>{0d4f8aae-ede2-4734-8051-00c5062b6756}</UniqueIdentifier>
     </Filter>
-    <Filter Include="frontend\loadini">
-      <UniqueIdentifier>{bda4b30c-dc97-44f8-8075-37cecc9b2dcc}</UniqueIdentifier>
+    <Filter Include="frontend\tomi">
+      <UniqueIdentifier>{e094c9d4-ba41-43f8-ab16-70d5d696cb17}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -146,10 +146,10 @@
     <ClCompile Include="..\src\backend\isa_cards\mda_isa_card.c">
       <Filter>backend\isa_cards</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\frontend\loadini\loadini.c">
-      <Filter>frontend\loadini</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\args.c" />
+    <ClCompile Include="..\lib\tomi\src\tomi.c">
+      <Filter>frontend\tomi</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\backend\chipset\i8237_dma.h">
@@ -263,9 +263,9 @@
     <ClInclude Include="..\src\backend\isa_cards\mda_isa_card.h">
       <Filter>backend\isa_cards</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\frontend\loadini\loadini.h">
-      <Filter>frontend\loadini</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\args.h" />
+    <ClInclude Include="..\lib\tomi\include\tomi.h">
+      <Filter>frontend\tomi</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

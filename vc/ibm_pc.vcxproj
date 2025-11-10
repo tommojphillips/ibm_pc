@@ -101,42 +101,42 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\lib\tomi\include;..\src</IncludePath>
     <OutDir>..\bin\x86\$(Configuration)\</OutDir>
     <IntDir>obj\x86\$(Configuration)\</IntDir>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LibraryPath>
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\lib\tomi\include;..\src</IncludePath>
     <OutDir>..\bin\x86\$(Configuration)\</OutDir>
     <IntDir>obj\x86\$(Configuration)\</IntDir>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LibraryPath>
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\lib\tomi\include;..\src</IncludePath>
     <OutDir>..\bin\x86\$(Configuration)\</OutDir>
     <IntDir>obj\x86\$(Configuration)\</IntDir>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);..\lib\SDL3\lib\x86;..\lib\SDL3_ttf\lib\x86;..\lib\UI\bin\x86</LibraryPath>
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\lib\tomi\include;..\src</IncludePath>
     <IntDir>obj\x64\$(Configuration)\</IntDir>
     <OutDir>..\bin\x64\$(Configuration)\</OutDir>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64</LibraryPath>
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\lib\tomi\include;..\src</IncludePath>
     <IntDir>obj\x64\$(Configuration)\</IntDir>
     <OutDir>..\bin\x64\$(Configuration)\</OutDir>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64</LibraryPath>
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\lib\i8086\src;..\lib\SDL3\include;..\lib\SDL3_ttf\include;..\lib\UI\include;..\lib\tomi\include;..\src</IncludePath>
     <IntDir>obj\x64\$(Configuration)\</IntDir>
     <OutDir>..\bin\x64\$(Configuration)\</OutDir>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64</LibraryPath>
@@ -256,6 +256,7 @@
     <ClCompile Include="..\lib\i8086\src\i8086_alu.c" />
     <ClCompile Include="..\lib\i8086\src\i8086_muldiv.c" />
     <ClCompile Include="..\lib\i8086\src\sign_extend.c" />
+    <ClCompile Include="..\lib\tomi\src\tomi.c" />
     <ClCompile Include="..\src\args.c" />
     <ClCompile Include="..\src\backend\chipset\i8237_dma.c" />
     <ClCompile Include="..\src\backend\chipset\i8253_pit.c" />
@@ -276,7 +277,6 @@
     <ClCompile Include="..\src\backend\video\cga.c" />
     <ClCompile Include="..\src\backend\video\crtc_6845.c" />
     <ClCompile Include="..\src\backend\video\mda.c" />
-    <ClCompile Include="..\src\frontend\loadini\loadini.c" />
     <ClCompile Include="..\src\frontend\sdl\dbg_gui.c" />
     <ClCompile Include="..\src\frontend\sdl\sdl3_button.c" />
     <ClCompile Include="..\src\frontend\sdl\sdl3_common.c" />
@@ -296,6 +296,7 @@
     <ClInclude Include="..\lib\i8086\src\i8086_mnem.h" />
     <ClInclude Include="..\lib\i8086\src\i8086_muldiv.h" />
     <ClInclude Include="..\lib\i8086\src\sign_extend.h" />
+    <ClInclude Include="..\lib\tomi\include\tomi.h" />
     <ClInclude Include="..\src\args.h" />
     <ClInclude Include="..\src\backend\bit_utils.h" />
     <ClInclude Include="..\src\backend\chipset\i8237_dma.h" />
@@ -317,7 +318,6 @@
     <ClInclude Include="..\src\backend\video\cga.h" />
     <ClInclude Include="..\src\backend\video\crtc_6845.h" />
     <ClInclude Include="..\src\backend\video\mda.h" />
-    <ClInclude Include="..\src\frontend\loadini\loadini.h" />
     <ClInclude Include="..\src\frontend\sdl\dbg_gui.h" />
     <ClInclude Include="..\src\frontend\sdl\sdl3_typedefs.h" />
     <ClInclude Include="..\src\frontend\sdl\sdl3_button.h" />
