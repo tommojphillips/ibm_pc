@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #include "i8237_dma.h"
-#include "backend/bit_utils.h"
+#include "backend/utility/bit_utils.h"
 
 #define DBG_PRINT
 #ifdef DBG_PRINT

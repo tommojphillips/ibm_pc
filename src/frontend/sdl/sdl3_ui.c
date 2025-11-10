@@ -11,7 +11,7 @@
 
 #include "backend/ibm_pc.h"
 #include "backend/fdd/fdd.h"
-#include "backend/ring_buffer.h"
+#include "backend/utility/ring_buffer.h"
 #include "frontend/utility/file.h"
 
 static void insert_disk(FDD_DISK* fdd, const char* const* filelist, int filter) {

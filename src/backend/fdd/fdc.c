@@ -8,8 +8,8 @@
 #include "fdc.h"
 #include "fdd.h"
 
-#include "backend/bit_utils.h"
-#include "backend/ring_buffer.h"
+#include "backend/utility/bit_utils.h"
+#include "backend/utility/ring_buffer.h"
 #include "backend/chipset/i8237_dma.h"
 
 /* I/O Port Addresses */

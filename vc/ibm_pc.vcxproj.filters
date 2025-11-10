@@ -73,9 +73,6 @@
     <ClCompile Include="..\src\backend\fdd\fdc.c">
       <Filter>backend\fdd</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\backend\ring_buffer.c">
-      <Filter>backend\utility</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\backend\ibm_pc.c">
       <Filter>backend</Filter>
     </ClCompile>
@@ -150,6 +147,9 @@
     <ClCompile Include="..\lib\tomi\src\tomi.c">
       <Filter>frontend\tomi</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\backend\utility\ring_buffer.c">
+      <Filter>backend\utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\backend\chipset\i8237_dma.h">
@@ -184,9 +184,6 @@
     </ClInclude>
     <ClInclude Include="..\src\backend\fdd\fdc.h">
       <Filter>backend\fdd</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\backend\ring_buffer.h">
-      <Filter>backend\utility</Filter>
     </ClInclude>
     <ClInclude Include="..\src\backend\ibm_pc.h">
       <Filter>backend</Filter>
@@ -227,9 +224,6 @@
     <ClInclude Include="..\src\backend\timing.h">
       <Filter>backend</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\backend\bit_utils.h">
-      <Filter>backend\utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\backend\fdd\lba.h">
       <Filter>backend\fdd</Filter>
     </ClInclude>
@@ -266,6 +260,12 @@
     <ClInclude Include="..\src\args.h" />
     <ClInclude Include="..\lib\tomi\include\tomi.h">
       <Filter>frontend\tomi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\utility\bit_utils.h">
+      <Filter>backend\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\utility\ring_buffer.h">
+      <Filter>backend\utility</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

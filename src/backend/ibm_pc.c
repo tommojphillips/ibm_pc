@@ -24,7 +24,7 @@
 #include "isa_cards/mda_isa_card.h"
 #include "isa_cards/cga_isa_card.h"
 
-#include "bit_utils.h"
+#include "utility/bit_utils.h"
 
 #include "frontend/utility/file.h"
 

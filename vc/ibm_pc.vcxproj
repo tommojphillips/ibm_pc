@@ -272,8 +272,8 @@
     <ClCompile Include="..\src\backend\isa_cards\cga_isa_card.c" />
     <ClCompile Include="..\src\backend\isa_cards\mda_isa_card.c" />
     <ClCompile Include="..\src\backend\keyboard.c" />
-    <ClCompile Include="..\src\backend\ring_buffer.c" />
     <ClCompile Include="..\src\backend\timing.c" />
+    <ClCompile Include="..\src\backend\utility\ring_buffer.c" />
     <ClCompile Include="..\src\backend\video\cga.c" />
     <ClCompile Include="..\src\backend\video\crtc_6845.c" />
     <ClCompile Include="..\src\backend\video\mda.c" />
@@ -298,7 +298,6 @@
     <ClInclude Include="..\lib\i8086\src\sign_extend.h" />
     <ClInclude Include="..\lib\tomi\include\tomi.h" />
     <ClInclude Include="..\src\args.h" />
-    <ClInclude Include="..\src\backend\bit_utils.h" />
     <ClInclude Include="..\src\backend\chipset\i8237_dma.h" />
     <ClInclude Include="..\src\backend\chipset\i8253_pit.h" />
     <ClInclude Include="..\src\backend\chipset\i8255_ppi.h" />
@@ -313,8 +312,9 @@
     <ClInclude Include="..\src\backend\isa_cards\cga_isa_card.h" />
     <ClInclude Include="..\src\backend\isa_cards\mda_isa_card.h" />
     <ClInclude Include="..\src\backend\keyboard.h" />
-    <ClInclude Include="..\src\backend\ring_buffer.h" />
     <ClInclude Include="..\src\backend\timing.h" />
+    <ClInclude Include="..\src\backend\utility\bit_utils.h" />
+    <ClInclude Include="..\src\backend\utility\ring_buffer.h" />
     <ClInclude Include="..\src\backend\video\cga.h" />
     <ClInclude Include="..\src\backend\video\crtc_6845.h" />
     <ClInclude Include="..\src\backend\video\mda.h" />

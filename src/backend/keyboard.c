@@ -6,7 +6,7 @@
 #include "keyboard.h"
 
 #include "timing.h"
-#include "backend/ring_buffer.h"
+#include "backend/utility/ring_buffer.h"
 
 #define KEYS_SIZE 10
 

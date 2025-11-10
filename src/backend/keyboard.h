@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#include "backend/ring_buffer.h"
+#include "backend/utility/ring_buffer.h"
 
 typedef struct KBD KBD;
 

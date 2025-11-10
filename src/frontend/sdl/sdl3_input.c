@@ -12,7 +12,7 @@
 #include "sdl3_keys.h"
 
 #include "backend/ibm_pc.h"
-#include "backend/ring_buffer.h"
+#include "backend/utility/ring_buffer.h"
 
 static void check_keys(WINDOW_INSTANCE* instance, SDL_Event* e) {
 
