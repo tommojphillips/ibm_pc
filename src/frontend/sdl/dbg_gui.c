@@ -316,7 +316,35 @@ void print_timer(int i, I8253_TIMER* timer, char* str) {
 		freq = clk / 0x10000;
 	}
 
-	sprintf(str, "Timer%d: %04X %04X %.2fhz - ", i, timer->counter, timer->reload, freq);
+	sprintf(str, "Timer%d: %04X %04X %d ", i, timer->counter, timer->reload, timer->out);
+	switch (timer->ctrl & I8253_PIT_CTRL_MODE) {
+		case I8253_PIT_MODE0:
+			strcat(str, "MODE 0");
+			break;
+		case I8253_PIT_MODE1:
+			strcat(str, "MODE 1");
+			break;
+		case I8253_PIT_MODE2:
+			strcat(str, "MODE 2");
+			break;
+		case I8253_PIT_MODE3:
+			strcat(str, "MODE 3");
+			break;
+		case I8253_PIT_MODE4:
+			strcat(str, "MODE 4");
+			break;
+		case I8253_PIT_MODE5:
+			strcat(str, "MODE 5");
+			break;
+		case I8253_PIT_MODE6:
+			strcat(str, "MODE 6");
+			break;
+		case I8253_PIT_MODE7:
+			strcat(str, "MODE 7");
+			break;
+	}
+	
+	sprintf(str+strlen(str), " - %.2fhz - ", freq);
 	switch (timer->channel_state) {
 		case I8253_TIMER_STATE_COUNTING:
 			strcat(str, "Counting");
@@ -331,7 +359,7 @@ void print_timer(int i, I8253_TIMER* timer, char* str) {
 			strcat(str, "Waiting for Reload");
 			break;
 		case I8253_TIMER_STATE_WAITING_LOAD_CYCLE:
-			strcat(str, "Waiting for Load Cycle");
+			strcat(str, "Waiting for Load");
 			break;
 	}
 }
