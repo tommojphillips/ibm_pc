@@ -263,8 +263,8 @@
     <ClCompile Include="..\src\backend\chipset\i8255_ppi.c" />
     <ClCompile Include="..\src\backend\chipset\i8259_pic.c" />
     <ClCompile Include="..\src\backend\chipset\nmi.c" />
-    <ClCompile Include="..\src\backend\fdd\fdc.c" />
-    <ClCompile Include="..\src\backend\fdd\fdd.c" />
+    <ClCompile Include="..\src\backend\fdc\fdc.c" />
+    <ClCompile Include="..\src\backend\fdc\fdd.c" />
     <ClCompile Include="..\src\backend\fdd\lba.c" />
     <ClCompile Include="..\src\backend\ibm_pc.c" />
     <ClCompile Include="..\src\backend\io\isa_bus.c" />
@@ -303,8 +303,8 @@
     <ClInclude Include="..\src\backend\chipset\i8255_ppi.h" />
     <ClInclude Include="..\src\backend\chipset\i8259_pic.h" />
     <ClInclude Include="..\src\backend\chipset\nmi.h" />
-    <ClInclude Include="..\src\backend\fdd\fdc.h" />
-    <ClInclude Include="..\src\backend\fdd\fdd.h" />
+    <ClInclude Include="..\src\backend\fdc\fdc.h" />
+    <ClInclude Include="..\src\backend\fdc\fdd.h" />
     <ClInclude Include="..\src\backend\fdd\lba.h" />
     <ClInclude Include="..\src\backend\ibm_pc.h" />
     <ClInclude Include="..\src\backend\io\isa_bus.h" />

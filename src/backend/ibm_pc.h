@@ -19,7 +19,7 @@
 #include "chipset/nmi.h"
 #include "video/mda.h"
 #include "video/cga.h"
-#include "fdd/fdc.h"
+#include "fdc/fdc.h"
 #include "keyboard.h"
 
 #include "timing.h"

@@ -10,7 +10,7 @@
 #include "ui.h"
 
 #include "backend/ibm_pc.h"
-#include "backend/fdd/fdd.h"
+#include "backend/fdc/fdd.h"
 #include "backend/utility/ring_buffer.h"
 #include "frontend/utility/file.h"
 

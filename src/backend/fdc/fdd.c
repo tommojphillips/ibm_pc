@@ -8,6 +8,7 @@
 
 #include "fdd.h"
 #include "frontend/utility/file.h"
+#include "backend/utility/lba.h"
 
 #define DBG_PRINT
 #ifdef DBG_PRINT

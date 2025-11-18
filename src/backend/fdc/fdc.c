@@ -10,6 +10,7 @@
 
 #include "backend/utility/bit_utils.h"
 #include "backend/utility/ring_buffer.h"
+#include "backend/utility/lba.h"
 #include "backend/chipset/i8237_dma.h"
 
 /* I/O Port Addresses */
@@ -389,13 +390,13 @@ static void command_results(FDC* fdc, uint8_t ic, uint8_t irq) {
 	st2(fdc);
 
 	/* Send command results */
-	ring_buffer_push(&fdc->data_register_out, fdc->st0);           /* ST0 */
-	ring_buffer_push(&fdc->data_register_out, fdc->st1);           /* ST1 */
-	ring_buffer_push(&fdc->data_register_out, fdc->st2);           /* ST2 */
-	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.c); /* C */
-	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.h); /* H */
-	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.s); /* R */
-	ring_buffer_push(&fdc->data_register_out, fdc->command.n);     /* N */
+	ring_buffer_push(&fdc->data_register_out, fdc->st0);                  /* ST0 */
+	ring_buffer_push(&fdc->data_register_out, fdc->st1);                  /* ST1 */
+	ring_buffer_push(&fdc->data_register_out, fdc->st2);                  /* ST2 */
+	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.c & 0xFF); /* C */
+	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.h);        /* H */
+	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.s);        /* R */
+	ring_buffer_push(&fdc->data_register_out, fdc->command.n);            /* N */
 
 	/* Reset command; set IRQ; send data */
 	command_reset(fdc, irq, SEND_DATA);
@@ -664,8 +665,8 @@ static void cmd_seek(FDC* fdc) {
 static void cmd_sense_interrupt(FDC* fdc) {
 
 	/* Send command results */
-	ring_buffer_push(&fdc->data_register_out, fdc->st0);           /* ST0 */
-	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.c); /* PCN */
+	ring_buffer_push(&fdc->data_register_out, fdc->st0);                  /* ST0 */
+	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.c & 0xFF); /* PCN */
 
 	/* Finish command */
 	command_reset(fdc, NO_IRQ, SEND_DATA);

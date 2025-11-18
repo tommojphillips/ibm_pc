@@ -17,7 +17,7 @@
 #include "chipset/i8255_ppi.h"
 #include "chipset/i8259_pic.h"
 #include "chipset/nmi.h"
-#include "fdd/fdc.h"
+#include "fdc/fdc.h"
 #include "video/mda.h"
 #include "video/cga.h"
 
