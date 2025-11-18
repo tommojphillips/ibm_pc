@@ -29,7 +29,7 @@ static void save_disk(FDD_DISK* fdd, const char* const* filelist, int filter) {
 static void draw_new_disk_submenu(FDD_DISK* fdd) {
 	char str[32] = { 0 };
 	for (uint32_t i = 0; i < disk_geometry_count; ++i) {
-		sprintf(&str[0], "%d KB", disk_geometry[i].size / 1024);
+		sprintf(&str[0], "%zu KB", disk_geometry[i].size / 1024);
 		if (ui_menu_button(str, 0, 1)) {
 			fdd_eject_disk(fdd);
 			fdd_new_disk(fdd, disk_geometry[i].size);
@@ -162,7 +162,7 @@ static void draw_display_submenu(DISPLAY_INSTANCE* display) {
 	if (ui_menu_button("Correct Aspect Ratio", display->config.correct_aspect_ratio, sel)) {
 		display->config.correct_aspect_ratio ^= 1;
 	}
-	
+
 	ui_menu_checkbox("Allow Display Disable", &display->config.allow_display_disable);
 
 	sel = window_instance_is_full_screen(display->window);
