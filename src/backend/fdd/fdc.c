@@ -143,8 +143,36 @@
 /* FDC DMA Channel */
 #define FDC_DMA 2
 
-static uint16_t decode_sector_size(uint8_t value) {
-	return (1 << (value + 7));
+static void advance_byte_index(FDC* fdc) {
+	fdc->byte_index += 1;
+	if (fdc->byte_index >= fdc->sector_size) {
+		/* Finished sector */
+		fdc->byte_index = 0;
+
+		/* Advance CHS to next sector */
+		chs_advance(fdc->fdd[fdc->fdd_select].geometry, &fdc->command.chs);
+	}
+}
+
+static uint16_t n_to_sector_size(uint8_t n) {
+	return (0x80 << n);
+}
+static uint8_t sector_size_to_n(uint16_t sector_size) {
+	uint8_t n = 0;
+	while (sector_size > 0x80) {
+		sector_size >>= 1;
+		n++;
+	}
+	return n;
+}
+
+static void set_polling_mode(FDC* fdc) {
+	if (fdc->dor & DOR_DMA_INT_MASK) {
+		fdc->msr &= ~MSR_RQM; /* Clear RQM; Dont let CPU poll */
+	}
+	else {
+		fdc->msr |= MSR_RQM; /* Set RQM; Let CPU poll */
+	}
 }
 
 static void send_data(FDC* fdc) {
@@ -158,10 +186,15 @@ static void receive_data(FDC* fdc) {
 }
 
 static void st0(FDC* fdc, uint8_t ic, uint8_t se) {
-	fdc->st0 = ic & ST0_IC_MASK;
+	fdc->st0 = 0;
 
+	/* Interrupt code */
+	fdc->st0 |= (ic & ST0_IC_MASK);
+
+	/* Drive select */
 	fdc->st0 |= fdc->fdd_select & US_MASK;
 
+	/* Is the drive on head 2? */
 	if (fdc->command.chs.h == 1) {
 		fdc->st0 |= ST0_HD;
 	}
@@ -170,7 +203,7 @@ static void st0(FDC* fdc, uint8_t ic, uint8_t se) {
 	if (!fdc->fdd[fdc->fdd_select].status.ready) {
 		fdc->st0 |= ST0_NR;
 	}
-	
+
 	if (se) {
 		fdc->st0 |= ST0_SE;
 	}
@@ -190,10 +223,12 @@ static void st1(FDC* fdc) {
 		fdc->st1 |= ST1_OR;
 	}
 
+	/* Is the drive write protected? */
 	if (fdc->fdd[fdc->fdd_select].status.write_protect) {
 		fdc->st1 |= ST1_NW;
 	}
 
+	/* Is the drive not ready? */
 	if (!fdc->fdd[fdc->fdd_select].status.ready) {
 		fdc->st1 |= (ST1_ND | ST1_MA);
 	}
@@ -212,6 +247,7 @@ static void st2(FDC* fdc) {
 static void st3(FDC* fdc) {
 	fdc->st3 = 0;
 
+	/* Drive select */
 	fdc->st3 |= fdc->fdd_select & US_MASK;
 
 	/* Is the drive on head 2? */
@@ -220,7 +256,7 @@ static void st3(FDC* fdc) {
 	}
 
 	/* Does the drive have two heads? */
-	if (fdc->fdd[fdc->fdd_select].disk_descriptor.h > 1) {
+	if (fdc->fdd[fdc->fdd_select].geometry.h > 1) {
 		fdc->st3 |= ST3_TS;
 	}
 
@@ -347,13 +383,12 @@ static void command_set_async(FDC* fdc) {
 	fdc->command.async = 1;
 }
 static void command_results(FDC* fdc, uint8_t ic, uint8_t irq) {
-	/* Send command results */
-
 	/* Set ST0, ST1, ST2 */
 	st0(fdc, ic, 0);
 	st1(fdc);
 	st2(fdc);
 
+	/* Send command results */
 	ring_buffer_push(&fdc->data_register_out, fdc->st0);           /* ST0 */
 	ring_buffer_push(&fdc->data_register_out, fdc->st1);           /* ST1 */
 	ring_buffer_push(&fdc->data_register_out, fdc->st2);           /* ST2 */
@@ -394,16 +429,11 @@ static void cmd_read_data(FDC* fdc) {
 	/* Load drive select */
 	fdc->fdd_select = fdc->command.dhs & US_MASK;
 
-	if (fdc->dor & DOR_DMA_INT_MASK) {
-		fdc->msr &= ~MSR_RQM; /* Clear RQM; Dont let CPU poll */
-	}
-	else {
-		fdc->msr |= MSR_RQM; /* Set RQM; Let CPU poll */
-	}
+	set_polling_mode(fdc);
 
-	fdc->sector_size = decode_sector_size(fdc->command.n);
+	fdc->sector_size = n_to_sector_size(fdc->command.n);
 	fdc->byte_index = 0;
-	
+		
 	dbg_print("[FDC] Read data %s dhs=%u, c=%u, h=%u, s=%u, n=%u, eot=%u, gpl=%u, dtl=%u\n",
 		(fdc->dma ? "DMA" : "PIO"), fdc->command.dhs, fdc->command.chs.c, fdc->command.chs.h, fdc->command.chs.s, 
 		fdc->command.n, fdc->command.eot, fdc->command.gap_len, fdc->command.data_len);
@@ -424,16 +454,12 @@ static void cmd_read_track(FDC* fdc) {
 
 	/* Load drive select */
 	fdc->fdd_select = fdc->command.dhs & US_MASK;
+	
+	set_polling_mode(fdc);
 
-	if (fdc->dor & DOR_DMA_INT_MASK) {
-		fdc->msr &= ~MSR_RQM; /* Clear RQM; Dont let CPU poll */
-	}
-	else {
-		fdc->msr |= MSR_RQM; /* Set RQM; Let CPU poll */
-	}
-
-	fdc->sector_size = decode_sector_size(fdc->command.n);
+	fdc->sector_size = n_to_sector_size(fdc->command.n);
 	fdc->byte_index = 0;
+	fdc->command.chs.s = 1; /* R is ignored on Read Track. Force s = 1. */
 
 	dbg_print("[FDC] Read track %s dhs=%u, c=%u, h=%u, s=%u, n=%u, eot=%u, gpl=%u, dtl=%u\n",
 		(fdc->dma ? "DMA" : "PIO"), fdc->command.dhs, fdc->command.chs.c, fdc->command.chs.h, fdc->command.chs.s, 
@@ -456,18 +482,12 @@ static void cmd_read_deleted_data(FDC* fdc) {
 	/* Load drive select */
 	fdc->fdd_select = fdc->command.dhs & US_MASK;
 
-	if (fdc->dor & DOR_DMA_INT_MASK) {
-		fdc->msr &= ~MSR_RQM; /* Clear RQM; Dont let CPU poll */
-	}
-	else {
-		fdc->msr |= MSR_RQM; /* Set RQM; Let CPU poll */
-	}
+	set_polling_mode(fdc);
 
-	dbg_print("[FDC] Read deleted data %s dhs=%u, c=%u, h=%u, s=%u, n=%u, eot=%u, gpl=%u, dtl=%u\n",
+	dbg_print("[FDC] Read deleted data (NOT IMPLEMENTED) %s dhs=%u, c=%u, h=%u, s=%u, n=%u, eot=%u, gpl=%u, dtl=%u\n",
 		(fdc->dma ? "DMA" : "PIO"), fdc->command.dhs, fdc->command.chs.c, fdc->command.chs.h, fdc->command.chs.s, 
 		fdc->command.n, fdc->command.eot, fdc->command.gap_len, fdc->command.data_len);
 
-	/* Send command results */
 	command_results(fdc, ST0_NT, NO_IRQ);
 }
 static void cmd_write_data(FDC* fdc) {
@@ -485,14 +505,9 @@ static void cmd_write_data(FDC* fdc) {
 	/* Load drive select */
 	fdc->fdd_select = fdc->command.dhs & US_MASK;
 
-	if (fdc->dor & DOR_DMA_INT_MASK) {
-		fdc->msr &= ~MSR_RQM; /* Clear RQM; Dont let CPU poll */
-	}
-	else {
-		fdc->msr |= MSR_RQM; /* Set RQM; Let CPU poll */
-	}
+	set_polling_mode(fdc);
 
-	fdc->sector_size = decode_sector_size(fdc->command.n);
+	fdc->sector_size = n_to_sector_size(fdc->command.n);
 	fdc->byte_index = 0;
 
 	dbg_print("[FDC] Write data %s dhs=%u, c=%u, h=%u, s=%u, n=%u, eot=%u, gpl=%u, dtl=%u\n",
@@ -506,21 +521,16 @@ static void cmd_format_track(FDC* fdc) {
 	/* Read command parameters */
 	fdc->command.dhs = ring_buffer_pop(&fdc->data_register_in);     /* HD/US1/US0 */
 	fdc->command.n = ring_buffer_pop(&fdc->data_register_in);       /* N */
-	uint8_t sc = ring_buffer_pop(&fdc->data_register_in);   /* SC */
+	uint8_t sc = ring_buffer_pop(&fdc->data_register_in);           /* SC */
 	fdc->command.gap_len = ring_buffer_pop(&fdc->data_register_in); /* GPL */
-	uint8_t d = ring_buffer_pop(&fdc->data_register_in);    /* D */
+	uint8_t d = ring_buffer_pop(&fdc->data_register_in);            /* D */
 
 	/* Load drive select */
 	fdc->fdd_select = fdc->command.dhs & US_MASK;
 
-	if (fdc->dor & DOR_DMA_INT_MASK) {
-		fdc->msr &= ~MSR_RQM; /* Clear RQM; Dont let CPU poll */
-	}
-	else {
-		fdc->msr |= MSR_RQM; /* Set RQM; Let CPU poll */
-	}
+	set_polling_mode(fdc);
 
-	fdc->sector_size = decode_sector_size(fdc->command.n);
+	fdc->sector_size = n_to_sector_size(fdc->command.n);
 	fdc->byte_index = 0;
 
 	dbg_print("[FDC] Format track %s dhs=%u, n=%u, sc=%u, gpl=%u, d=%u\n",
@@ -543,17 +553,11 @@ static void cmd_write_deleted_data(FDC* fdc) {
 	/* Load drive select */
 	fdc->fdd_select = fdc->command.dhs & US_MASK;
 
-	if (fdc->dor & DOR_DMA_INT_MASK) {
-		fdc->msr &= ~MSR_RQM; /* Clear RQM; Dont let CPU poll */
-	}
-	else {
-		fdc->msr |= MSR_RQM; /* Set RQM; Let CPU poll */
-	}
+	set_polling_mode(fdc);
 
-	/* Send command results */
 	command_results(fdc, ST0_NT, NO_IRQ);
 
-	dbg_print("[FDC] Write deleted data %s dhs=%u, c=%u, h=%u, s=%u, n=%u, eot=%u, gpl=%u, dtl=%u\n",
+	dbg_print("[FDC] Write deleted data (NOT IMPLEMENTED) %s dhs=%u, c=%u, h=%u, s=%u, n=%u, eot=%u, gpl=%u, dtl=%u\n",
 		(fdc->dma ? "DMA" : "PIO"), fdc->command.dhs, fdc->command.chs.c, fdc->command.chs.h, fdc->command.chs.s, 
 		fdc->command.n, fdc->command.eot, fdc->command.gap_len, fdc->command.data_len);
 }
@@ -571,7 +575,6 @@ static void cmd_scan_e(FDC* fdc) {
 	uint8_t stp = ring_buffer_pop(&fdc->data_register_in);          /* STP */
 	(void)stp;
 
-	/* Send command results */
 	command_results(fdc, ST0_NT, NO_IRQ);
 
 	dbg_print("[FDC] scan e (NOT IMPLEMENTED)\n");
@@ -589,7 +592,6 @@ static void cmd_scan_le(FDC* fdc) {
 	uint8_t stp = ring_buffer_pop(&fdc->data_register_in);          /* STP */
 	(void)stp;
 
-	/* Send command results */
 	command_results(fdc, ST0_NT, NO_IRQ);
 
 	dbg_print("[FDC] scan le (NOT IMPLEMENTED)\n");
@@ -607,7 +609,6 @@ static void cmd_scan_he(FDC* fdc) {
 	uint8_t stp = ring_buffer_pop(&fdc->data_register_in);          /* STP */
 	(void)stp;
 
-	/* Send command results */
 	command_results(fdc, ST0_NT, NO_IRQ);
 
 	dbg_print("[FDC] scan he (NOT IMPLEMENTED)\n");
@@ -623,6 +624,8 @@ static void cmd_recalibrate(FDC* fdc) {
 
 	/* Seek to cylinder 0 */
 	fdc->command.chs.c = 0;
+	fdc->command.chs.h = 0;
+	fdc->command.chs.s = 1;
 
 	/* Set ST0 */
 	st0(fdc, ST0_NT, ST0_SE);
@@ -630,7 +633,7 @@ static void cmd_recalibrate(FDC* fdc) {
 	/* Finish command */
 	command_reset(fdc, IRQ, RECEIVE_DATA);
 
-	dbg_print("[FDC] recalibrate\n");
+	dbg_print("[FDC] Recalibrate dhs=%u\n", fdc->command.dhs);
 }
 static void cmd_seek(FDC* fdc) {
 
@@ -638,11 +641,14 @@ static void cmd_seek(FDC* fdc) {
 	fdc->command.dhs = ring_buffer_pop(&fdc->data_register_in);   /* HD/US1/US0 */
 	fdc->command.chs.c = ring_buffer_pop(&fdc->data_register_in); /* NCN */
 
-	/* Load drive select */
+	/* Load drive/head select */
 	fdc->fdd_select = fdc->command.dhs & US_MASK;
+	fdc->command.chs.h = (fdc->command.dhs >> 2) & 1;
+	
+	fdc->command.chs.s = 1;
 
 	/* Set ST0 */
-	if (fdc->command.chs.c < fdc->fdd[fdc->fdd_select].disk_descriptor.c) {
+	if (fdc->command.chs.c < fdc->fdd[fdc->fdd_select].geometry.c) {
 		st0(fdc, ST0_NT, ST0_SE);
 	}
 	else {
@@ -652,7 +658,7 @@ static void cmd_seek(FDC* fdc) {
 	/* Finish command */
 	command_reset(fdc, IRQ, RECEIVE_DATA);
 
-	dbg_print("[FDC] seek\n");
+	dbg_print("[FDC] Seek dhs=%u, ncn=%d\n", fdc->command.dhs, fdc->command.chs.c);
 }
 
 static void cmd_sense_interrupt(FDC* fdc) {
@@ -664,7 +670,7 @@ static void cmd_sense_interrupt(FDC* fdc) {
 	/* Finish command */
 	command_reset(fdc, NO_IRQ, SEND_DATA);
 
-	dbg_print("[FDC] sense interrupt\n");
+	dbg_print("[FDC] Sense interrupt st0=%x, pcn=%d\n", fdc->st0, fdc->command.chs.c);
 }
 static void cmd_sense_drive_status(FDC* fdc) {
 
@@ -683,7 +689,7 @@ static void cmd_sense_drive_status(FDC* fdc) {
 	/* Finish command */
 	command_reset(fdc, NO_IRQ, SEND_DATA);
 
-	dbg_print("[FDC] sense drive status\n");
+	dbg_print("[FDC] Sense drive status\n");
 }
 
 static void cmd_read_id(FDC* fdc) {
@@ -691,16 +697,15 @@ static void cmd_read_id(FDC* fdc) {
 	/* Read command parameters */
 	fdc->command.dhs = ring_buffer_pop(&fdc->data_register_in); /* HD/US1/US0 */
 
-	/* Load drive select */
-	fdc->fdd_select = fdc->command.dhs & US_MASK;
-
-	dbg_print("[FDC] read id dhs=%u\n", fdc->command.dhs);
-
-	/* Send command results */
+	/* Load drive/head select */
+	fdc->fdd_select = fdc->command.dhs & US_MASK;		
+	fdc->command.chs.h = (fdc->command.dhs >> 2) & 1;
+	
 	command_results(fdc, ST0_NT, IRQ);
 
-	/* Advance CHS to next sector */
-	chs_advance(fdc->fdd[fdc->fdd_select].disk_descriptor, &fdc->command.chs);
+	dbg_print("[FDC] Read id dhs=%u, c=%d\n", fdc->command.dhs, fdc->command.chs.c);
+
+	chs_advance_sector(fdc->fdd[fdc->fdd_select].geometry, &fdc->command.chs);
 }
 static void cmd_specify(FDC* fdc) {
 
@@ -728,11 +733,7 @@ static void cmd_specify(FDC* fdc) {
 	/* Finish command */
 	command_reset(fdc, NO_IRQ, RECEIVE_DATA);
 
-	dbg_print("[FDC] specify\n");
-	/*dbg_print("[FDC] Head Load Time:   %d\n", hlt);
-	dbg_print("[FDC] Head Unload Time: %d\n", hut);
-	dbg_print("[FDC] Step Rate Time:   %d\n", srt);
-	dbg_print("[FDC] Non-DMA:          %d (%d)\n", !nd, fdc->dma);*/
+	dbg_print("[FDC] Specify srt=%d, hut=%d, hlt=%d, nd=%d \n", srt, hut, hlt, nd);
 }
 static void cmd_nop(FDC* fdc) {
 	
@@ -752,14 +753,12 @@ static void cmd_nop(FDC* fdc) {
 static void cmd_read_data_async(FDC* fdc) {
 	if (!fdc->dma) {
 		dbg_print("[FDC] Read data. PIO mode not implemented\n");
-		/* Send command results */
 		command_results(fdc, ST0_AT, IRQ);
 		return;
 	}
 
 	/* Check if the fdd ready signal changed state */
 	if (!fdc->fdd[fdc->fdd_select].status.ready) {
-		/* Send command results */
 		command_results(fdc, ST0_AT2, IRQ);
 		return;
 	}
@@ -768,49 +767,31 @@ static void cmd_read_data_async(FDC* fdc) {
 
 		if (i8237_dma_channel_ready(fdc->dma_p, FDC_DMA)) {
 
+			uint32_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
+			
 			/* Read data from fdd */
-			LBA lba = chs_to_lba(fdc->fdd[fdc->fdd_select].disk_descriptor, fdc->command.chs);
-			uint32_t offset = (lba * fdc->sector_size) + fdc->byte_index;
 			uint8_t byte = fdd_read_byte(&fdc->fdd[fdc->fdd_select], offset);
 
 			/* Write data to dma */
 			i8237_dma_write_byte(fdc->dma_p, FDC_DMA, byte);
 
-			if (fdc->byte_index == 0) {
-				//dbg_print("[FDC] Reading data FDD%d C=%d H=%d S=%d -> LBA=%u -> OFFSET=%u\n", fdc->fdd_select, fdc->chs.c, fdc->chs.h, fdc->chs.s, lba, offset);
-			}
-
-			fdc->byte_index += 1;
-			if (fdc->byte_index >= fdc->sector_size) {
-				/* Finished sector */
-				fdc->byte_index = 0;
-
-				/* Advance CHS to next sector */
-				chs_advance(fdc->fdd[fdc->fdd_select].disk_descriptor, &fdc->command.chs);
-			}
+			/* Advance byte index */
+			advance_byte_index(fdc);
 		}
 	}
 	else {
-
-		//dbg_print("[FDC] Read data completed. C=%u H=%u S=%u\n", fdc->chs.c, fdc->chs.h, fdc->chs.s);
-
-		fdc->byte_index = 0;
-
-		/* Send command results */
 		command_results(fdc, ST0_NT, IRQ);
 	}
 }
 static void cmd_read_track_async(FDC* fdc) {
 	if (!fdc->dma) {
 		dbg_print("[FDC] Read track. PIO mode not implemented\n");
-		/* Send command results */
 		command_results(fdc, ST0_AT, IRQ);
 		return;
 	}
 
 	/* Check if the fdd ready signal changed state */
 	if (!fdc->fdd[fdc->fdd_select].status.ready) {
-		/* Send command results */
 		command_results(fdc, ST0_AT2, IRQ);
 		return;
 	}
@@ -819,56 +800,42 @@ static void cmd_read_track_async(FDC* fdc) {
 
 		if (i8237_dma_channel_ready(fdc->dma_p, FDC_DMA)) {
 
+			uint32_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
+			
 			/* Read data from fdd */
-			LBA lba = chs_to_lba(fdc->fdd[fdc->fdd_select].disk_descriptor, fdc->command.chs);
-			uint32_t offset = (lba * fdc->sector_size) + fdc->byte_index;
 			uint8_t byte = fdd_read_byte(&fdc->fdd[fdc->fdd_select], offset);
 
 			/* Write data to dma */
 			i8237_dma_write_byte(fdc->dma_p, FDC_DMA, byte);
 
-			if (fdc->byte_index == 0) {
-				//dbg_print("[FDC] Reading track FDD%d C=%d H=%d S=%d -> LBA=%u -> OFFSET=%u\n", fdc->fdd_select, fdc->chs.c, fdc->chs.h, fdc->chs.s, lba, offset);
-			}
+			/* Advance byte index */
+			advance_byte_index(fdc);
 
-			fdc->byte_index += 1;
-			if (fdc->byte_index >= fdc->sector_size) {
-				/* Finished sector */
-				fdc->byte_index = 0;
-
-				/* Advance CHS to next sector */
-				chs_advance(fdc->fdd[fdc->fdd_select].disk_descriptor, &fdc->command.chs);
+			/* Check EOT */
+			if (fdc->command.chs.s > fdc->command.eot) {
+				command_results(fdc, ST0_NT, IRQ);
 			}
 		}
 	}
 	else {
-
-		//dbg_print("[FDC] Read track completed. C=%u H=%u S=%u\n", fdc->chs.c, fdc->chs.h, fdc->chs.s);
-
-		fdc->byte_index = 0;
-
-		/* Send command results */
 		command_results(fdc, ST0_NT, IRQ);
 	}
 }
 static void cmd_write_data_async(FDC* fdc) {
 	if (!fdc->dma) {
 		dbg_print("[FDC] Write data. PIO mode not implemented\n");
-		/* Send command results */
 		command_results(fdc, ST0_AT, IRQ);
 		return;
 	}
 
 	/* Check if the fdd ready signal changed state */
 	if (!fdc->fdd[fdc->fdd_select].status.ready) {
-		/* Send command results */
 		command_results(fdc, ST0_AT2, IRQ);
 		return;
 	}
 
 	/* check if the fdd write protect signal is active */
 	if (fdc->fdd[fdc->fdd_select].status.write_protect) {
-		/* Send command results */
 		command_results(fdc, ST0_AT, IRQ);
 		return;
 	}
@@ -877,56 +844,37 @@ static void cmd_write_data_async(FDC* fdc) {
 
 		if (i8237_dma_channel_ready(fdc->dma_p, FDC_DMA)) {
 
+			uint32_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
+			
 			/* Read data from dma */
 			uint8_t byte = i8237_dma_read_byte(fdc->dma_p, FDC_DMA);
 
 			/* Write data to fdd */
-			LBA lba = chs_to_lba(fdc->fdd[fdc->fdd_select].disk_descriptor, fdc->command.chs);
-			uint32_t offset = (lba * fdc->sector_size) + fdc->byte_index;
 			fdd_write_byte(&fdc->fdd[fdc->fdd_select], offset, byte);
 
-			if (fdc->byte_index == 0) {
-				//dbg_print("[FDC] Writing data FDD%d C=%d H=%d S=%d -> LBA=%u -> OFFSET=%u\n", fdc->fdd_select, fdc->chs.c, fdc->chs.h, fdc->chs.s, lba, offset);
-			}
-
-			fdc->byte_index += 1;
-			if (fdc->byte_index >= fdc->sector_size) {
-				/* Finished sector */
-				fdc->byte_index = 0;
-
-				/* Advance CHS to next sector */
-				chs_advance(fdc->fdd[fdc->fdd_select].disk_descriptor, &fdc->command.chs);
-			}
+			/* Advance byte index */
+			advance_byte_index(fdc);
 		}
 	}
 	else {
-
-		//dbg_print("[FDC] Write data completed, C=%u H=%u S=%u\n", fdc->chs.c, fdc->chs.h, fdc->chs.s);
-
-		fdc->byte_index = 0;
-
-		/* Send command results */
 		command_results(fdc, ST0_NT, IRQ);
 	}
 }
 static void cmd_format_track_async(FDC* fdc) {
 	if (!fdc->dma) {
 		dbg_print("[FDC] Write track. PIO mode not implemented\n");
-		/* Send command results */
 		command_results(fdc, ST0_AT, IRQ);
 		return;
 	}
 
 	/* Check if the fdd ready signal changed state */
 	if (!fdc->fdd[fdc->fdd_select].status.ready) {
-		/* Send command results */
 		command_results(fdc, ST0_AT2, IRQ);
 		return;
 	}
 
 	/* Check if the fdd write protect signal is active */
 	if (fdc->fdd[fdc->fdd_select].status.write_protect) {
-		/* Send command results */
 		command_results(fdc, ST0_AT, IRQ);
 		return;
 	}
@@ -935,35 +883,19 @@ static void cmd_format_track_async(FDC* fdc) {
 
 		if (i8237_dma_channel_ready(fdc->dma_p, FDC_DMA)) {
 
+			uint32_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
+			
 			/* Read data from dma */
 			uint8_t byte = i8237_dma_read_byte(fdc->dma_p, FDC_DMA);
 
 			/* Write data to fdd */
-			LBA lba = chs_to_lba(fdc->fdd[fdc->fdd_select].disk_descriptor, fdc->command.chs);
-			uint32_t offset = (lba * fdc->sector_size) + fdc->byte_index;
 			fdd_write_byte(&fdc->fdd[fdc->fdd_select], offset, byte);
 
-			if (fdc->byte_index == 0) {
-				//dbg_print("[FDC] Writing track FDD%d C=%d H=%d S=%d -> LBA=%u -> OFFSET=%u\n", fdc->fdd_select, fdc->chs.c, fdc->chs.h, fdc->chs.s, lba, offset);
-			}
-
-			fdc->byte_index += 1;
-			if (fdc->byte_index >= fdc->sector_size) {
-				/* Finished sector */
-				fdc->byte_index = 0;
-
-				/* Advance CHS to next sector */
-				chs_advance(fdc->fdd[fdc->fdd_select].disk_descriptor, &fdc->command.chs);
-			}
+			/* Advance byte index */
+			advance_byte_index(fdc);
 		}
 	}
 	else {
-
-		//dbg_print("[FDC] Write track completed, C=%u H=%u S=%u\n", fdc->chs.c, fdc->chs.h, fdc->chs.s);
-
-		fdc->byte_index = 0;
-
-		/* Send command results */
 		command_results(fdc, ST0_NT, IRQ);
 	}
 }

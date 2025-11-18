@@ -7,30 +7,37 @@
 
 #include "lba.h"
 
-CHS lba_to_chs(const CHS disk_descriptor, const LBA lba) {
-	uint32_t spc = disk_descriptor.h * disk_descriptor.s;
+CHS lba_to_chs(const CHS geometry, const LBA lba) {
+	uint32_t spc = geometry.h * geometry.s;
 	uint32_t temp = lba % spc;
 	
 	CHS chs = { 0 };
 	chs.c = (lba / spc) & 0xFF;
-	chs.h = (temp / disk_descriptor.s) & 0xFF;
-	chs.s = (temp % disk_descriptor.s) + 1;
+	chs.h = (temp / geometry.s) & 0xFF;
+	chs.s = (temp % geometry.s) + 1;
 	return chs;
 }
-LBA chs_to_lba(const CHS disk_descriptor, const CHS chs) {
-	LBA lba = ((chs.c * disk_descriptor.h + chs.h) * disk_descriptor.s) + (chs.s - 1);
+LBA chs_to_lba(const CHS geometry, const CHS chs) {
+	LBA lba = ((chs.c * geometry.h + chs.h) * geometry.s) + (chs.s - 1);
 	return lba;
 }
 
-void chs_advance(const CHS disk_descriptor, CHS* const chs) {
+void chs_advance(const CHS geometry, CHS* const chs) {
 	chs->s++;
-	if (chs->s > disk_descriptor.s) {
+	if (chs->s > geometry.s) {
 		chs->s = 1;
 		chs->h++;
-		if (chs->h >= disk_descriptor.h) {
+		if (chs->h >= geometry.h) {
 			chs->h = 0;
 			chs->c++;
 		}
+	}
+}
+
+void chs_advance_sector(const CHS geometry, CHS* const chs) {
+	chs->s++;
+	if (chs->s > geometry.s) {
+		chs->s = 1;
 	}
 }
 
@@ -38,4 +45,28 @@ void chs_set(CHS* const dest, const CHS src) {
 	dest->c = src.c;
 	dest->h = src.h;
 	dest->s = src.s;
+}
+
+void chs_reset(CHS* const dest) {
+	dest->c = 0;
+	dest->h = 0;
+	dest->s = 0;
+}
+
+uint32_t lba_to_offset(LBA lba, uint16_t sector_size, uint32_t index) {
+	return (lba * sector_size) + index;
+}
+
+LBA offset_to_lba(uint32_t offset, uint16_t sector_size, uint32_t index) {
+	return (offset - index) / sector_size;
+}
+
+uint32_t chs_to_offset(const CHS geometry, CHS const chs, uint16_t sector_size, uint32_t index) {
+	LBA lba = chs_to_lba(geometry, chs);
+	return lba_to_offset(lba, sector_size, index);
+}
+
+CHS offset_to_chs(const CHS geometry, uint32_t offset, uint16_t sector_size, uint32_t index) {
+	LBA lba = offset_to_lba(offset, sector_size, index);
+	return lba_to_chs(geometry, lba);
 }

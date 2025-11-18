@@ -54,7 +54,7 @@ typedef struct FDC {
 	uint8_t fdd_select;
 	uint8_t dma;          /* DMA/PIO */
 	FDC_COMMAND command;
-		
+
 	uint16_t sector_size;
 	uint32_t byte_index;
 
