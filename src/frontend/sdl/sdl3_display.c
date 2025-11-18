@@ -201,7 +201,7 @@ static void mda_text_draw_screen(DISPLAY_INSTANCE* display, MDA* mda) {
 	}
 }
 static void mda_draw_screen(DISPLAY_INSTANCE* display, MDA* mda) {
-	if (!(mda->mode & MDA_MODE_VIDEO_ENABLE)) {
+	if (display->config.allow_display_disable && !(mda->mode & MDA_MODE_VIDEO_ENABLE)) {
 		disabled_draw_screen(display);
 		return;
 	}
@@ -492,7 +492,7 @@ static void cga_text_draw_screen(DISPLAY_INSTANCE* display, CGA* cga) {
 }
 
 static void cga_draw_screen(DISPLAY_INSTANCE* display, CGA* cga) {
-	if (!(cga->mode & CGA_MODE_VIDEO_ENABLE)) {
+	if (display->config.allow_display_disable && !(cga->mode & CGA_MODE_VIDEO_ENABLE)) {
 		disabled_draw_screen(display);
 		return;
 	}

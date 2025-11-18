@@ -23,6 +23,7 @@ typedef struct DISPLAY_CONFIG {
 	int display_view_mode;
 	int display_scale_mode;
 	int texture_scale_mode;
+	int allow_display_disable;
 	char mda_font[FONT_PATH_LEN];
 	char cga_font[FONT_PATH_LEN];
 } DISPLAY_CONFIG;

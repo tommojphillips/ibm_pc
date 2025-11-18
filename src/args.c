@@ -83,6 +83,7 @@ static const TOMI_SETTING setting_map[] = {
 	TOMI_SETTING_ENUM_U8("display_view_mode", display_view_def),
 	TOMI_SETTING_BOOL("correct_aspect_ratio"),
 	TOMI_SETTING_BOOL("emulate_max_scanline"),
+	TOMI_SETTING_BOOL("allow_display_disable"),
 	TOMI_SETTING_STR("mda_font", TOMI_FIELD_SIZE(DISPLAY_CONFIG, mda_font)),
 	TOMI_SETTING_STR("cga_font", TOMI_FIELD_SIZE(DISPLAY_CONFIG, cga_font)),
 };
@@ -147,6 +148,7 @@ void args_set_default(ARGS* args) {
 	args->display_config->texture_scale_mode = SDL_SCALEMODE_NEAREST;
 	args->display_config->display_scale_mode = DISPLAY_SCALE_FIT;
 	args->display_config->display_view_mode = DISPLAY_VIEW_CROPPED;
+	args->display_config->allow_display_disable = 1;
 	strcpy(args->display_config->mda_font, "Bm437_IBM_MDA.FON");
 	strcpy(args->display_config->cga_font, "Bm437_IBM_CGA.FON");
 }
@@ -440,6 +442,7 @@ int args_parse_ini(TOMI_VAR* var_map, ARGS* args) {
 	set_var(&args->display_config->display_view_mode);
 	set_var(&args->display_config->correct_aspect_ratio);
 	set_var(&args->display_config->scanline_emu);
+	set_var(&args->display_config->allow_display_disable);
 	set_var(&args->display_config->mda_font);
 	set_var(&args->display_config->cga_font);
 

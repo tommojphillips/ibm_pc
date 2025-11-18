@@ -163,6 +163,8 @@ static void draw_display_submenu(DISPLAY_INSTANCE* display) {
 		display->config.correct_aspect_ratio ^= 1;
 	}
 	
+	ui_menu_checkbox("Allow Display Disable", &display->config.allow_display_disable);
+
 	sel = window_instance_is_full_screen(display->window);
 	if (ui_menu_button("Full Screen", sel, 1)) {
 		window_instance_toggle_full_screen(display->window);
