@@ -10,9 +10,9 @@
 
 /* CHS struct */
 typedef struct CHS {
-	uint8_t c; /* Cylinder */
-	uint8_t h; /* Head */
-	uint8_t s; /* Sector */
+	uint16_t c; /* Cylinder */
+	uint8_t h;  /* Head */
+	uint8_t s;  /* Sector */
 } CHS;
 
 /* Logical Block Addressing */
