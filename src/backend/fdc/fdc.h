@@ -64,6 +64,8 @@ typedef struct FDC {
 
 	FDD_DISK fdd[FDD_MAX];
 
+	uint64_t accum;  /* cycle accum */
+	
 	void(*do_irq)(void* fdc);
 
 	uint8_t(*read_mem_byte)(uint32_t);         /* read mem byte */

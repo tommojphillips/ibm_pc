@@ -113,9 +113,6 @@ void dbg_gui_render(WINDOW_INSTANCE* instance, DBG_GUI* gui) {
 	sprintf(gui->str, "DMA %6llu cycles", ibm_pc->dma_cycles);
 	SDL_RenderDebugText(instance->renderer, 10.0f, instance->transform.h - 60.0f, gui->str);
 	
-	sprintf(gui->str, "FDC %6llu cycles", ibm_pc->fdc_cycles);
-	SDL_RenderDebugText(instance->renderer, 10.0f, instance->transform.h - 50.0f, gui->str);
-	
 	sprintf(gui->str, "PIT %6llu cycles", ibm_pc->pit_cycles);
 	SDL_RenderDebugText(instance->renderer, 10.0f, instance->transform.h - 40.0f, gui->str);
 	

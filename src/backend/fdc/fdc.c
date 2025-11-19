@@ -1113,6 +1113,8 @@ void upd765_fdc_reset(FDC* fdc) {
 	fdc->sector_size = 0;
 	fdc->byte_index = 0;
 
+	fdc->accum = 0;
+
 	ring_buffer_reset(&fdc->data_register_out);
 	ring_buffer_reset(&fdc->data_register_in);
 }

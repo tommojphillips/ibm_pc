@@ -23,6 +23,7 @@
 
 #include "isa_cards/mda_isa_card.h"
 #include "isa_cards/cga_isa_card.h"
+#include "isa_cards/fdc_isa_card.h"
 
 #include "utility/bit_utils.h"
 
@@ -50,11 +51,6 @@
 #define PPI_PORT_B   (PPI_BASE_ADDRESS + 1) // Port B
 #define PPI_PORT_C   (PPI_BASE_ADDRESS + 2) // Port C
 #define PPI_CONTROL  (PPI_BASE_ADDRESS + 3) // Control Port
-
-#define FDC_BASE_ADDRESS 0x3F0 // Base port address of the FDC
-#define FDC_DIGITAL_OUTPUT  (FDC_BASE_ADDRESS + 2) // (RW)
-#define FDC_MAIN_STATUS     (FDC_BASE_ADDRESS + 4) // (RO)
-#define FDC_DATA_FIFO       (FDC_BASE_ADDRESS + 5) // (RW)
 
 /* PPI Port B */
 #define PORTB_TIMER2_GATE        0x01 // b0 - Turn on timer2; on = 1, off = 0
@@ -313,10 +309,6 @@ static uint8_t read_io_byte(uint16_t port) {
 		case PPI_PORT_C:
 			return i8255_ppi_read_io_byte(&ibm_pc->ppi, port & ~PPI_BASE_ADDRESS);
 		
-		case FDC_MAIN_STATUS:
-		case FDC_DATA_FIFO:
-			return upd765_fdc_read_io_byte(&ibm_pc->fdc, (uint8_t)(port & ~FDC_BASE_ADDRESS));
-
 		case 0x201: // Gamepad
 			return 0x0;
 
@@ -378,11 +370,6 @@ static void write_io_byte(uint16_t port, uint8_t value) {
 		case PPI_PORT_C:
 		case PPI_CONTROL:
 			i8255_ppi_write_io_byte(&ibm_pc->ppi, (uint8_t)(port & ~PPI_BASE_ADDRESS), value);
-			break;
-
-		case FDC_DIGITAL_OUTPUT:
-		case FDC_DATA_FIFO:
-			upd765_fdc_write_io_byte(&ibm_pc->fdc, (uint8_t)(port & ~FDC_BASE_ADDRESS), value);
 			break;
 
 		default:
@@ -575,18 +562,6 @@ static void dma_update(void) {
 		ibm_pc->dma_accum -= cycle_target;
 		ibm_pc->dma_cycles++;
 		i8237_dma_update(&ibm_pc->dma);
-	}
-}
-static void fdc_update(void) {
-	/* fdc cycles are 3/14 of cpu cycles */
-	const uint64_t cycle_target = 14; // CPU cycles
-	const uint64_t cycle_factor = 3;  // factor
-
-	ibm_pc->fdc_accum += ibm_pc->cpu.cycles * cycle_factor;
-	while (ibm_pc->fdc_accum >= cycle_target) {
-		ibm_pc->fdc_accum -= cycle_target;
-		ibm_pc->fdc_cycles++;
-		upd765_fdc_update(&ibm_pc->fdc);
 	}
 }
 static void pic_update(void) {
@@ -884,7 +859,6 @@ void ibm_pc_update(void) {
 				ibm_pc->step = 1;
 				isa_bus_update(&ibm_pc->isa_bus, ibm_pc->cpu.cycles);
 				dma_update();
-				fdc_update();
 				pit_update();
 				kbd_update();
 				pic_update();
@@ -894,14 +868,11 @@ void ibm_pc_update(void) {
 		else {
 			ibm_pc->cpu_cycles = ibm_pc->cpu_accum;
 			ibm_pc->dma_cycles = 0;
-			ibm_pc->fdc_cycles = 0;
 			ibm_pc->pit_cycles = 0;
 			ibm_pc->kbd_cycles = 0;
 			while (ibm_pc->cpu_cycles < cpu_cycles_per_frame && !ibm_pc->step) {
 				isa_bus_update(&ibm_pc->isa_bus, ibm_pc->cpu.cycles);
-
 				dma_update();
-				fdc_update();
 				pit_update();
 				kbd_update();
 				pic_update();
@@ -923,9 +894,6 @@ void ibm_pc_reset(void) {
 	ibm_pc->pit_cycles = 0;
 	ibm_pc->pit_accum = 0;
 
-	ibm_pc->fdc_cycles = 0;
-	ibm_pc->fdc_accum = 0;
-
 	ibm_pc->dma_cycles = 0;
 	ibm_pc->dma_accum = 0;
 
@@ -939,7 +907,6 @@ void ibm_pc_reset(void) {
 	i8253_pit_reset(&ibm_pc->pit);
 	i8255_ppi_reset(&ibm_pc->ppi);
 	i8259_pic_reset(&ibm_pc->pic);
-	upd765_fdc_reset(&ibm_pc->fdc);
 	kbd_reset(&ibm_pc->kbd);
 
 	isa_bus_reset(&ibm_pc->isa_bus);
@@ -1070,6 +1037,8 @@ void ibm_pc_init(void) {
 
 	/* CGA Card; VIDEO RAM - B8000 - BBFFF (0x4000 16K) mirrored up to 0xBFFFF (0x8000 32K) x2 */
 	isa_card_add_cga(&ibm_pc->isa_bus, &ibm_pc->cga);
+
+	isa_card_add_fdc(&ibm_pc->isa_bus, &ibm_pc->fdc);
 
 	/* After all mregions are set; validate the memory map */
 	memory_map_validate(&ibm_pc->mm);

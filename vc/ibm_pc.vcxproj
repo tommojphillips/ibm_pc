@@ -270,6 +270,7 @@
     <ClCompile Include="..\src\backend\io\isa_bus.c" />
     <ClCompile Include="..\src\backend\io\memory_map.c" />
     <ClCompile Include="..\src\backend\isa_cards\cga_isa_card.c" />
+    <ClCompile Include="..\src\backend\isa_cards\fdc_isa_card.c" />
     <ClCompile Include="..\src\backend\isa_cards\mda_isa_card.c" />
     <ClCompile Include="..\src\backend\keyboard.c" />
     <ClCompile Include="..\src\backend\timing.c" />
@@ -310,6 +311,7 @@
     <ClInclude Include="..\src\backend\io\isa_bus.h" />
     <ClInclude Include="..\src\backend\io\memory_map.h" />
     <ClInclude Include="..\src\backend\isa_cards\cga_isa_card.h" />
+    <ClInclude Include="..\src\backend\isa_cards\fdc_isa_card.h" />
     <ClInclude Include="..\src\backend\isa_cards\mda_isa_card.h" />
     <ClInclude Include="..\src\backend\keyboard.h" />
     <ClInclude Include="..\src\backend\timing.h" />

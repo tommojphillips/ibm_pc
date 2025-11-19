@@ -147,9 +147,6 @@ typedef struct IBM_PC {
 	uint64_t pit_accum;
 	uint64_t pit_cycles;
 	
-	uint64_t fdc_accum;
-	uint64_t fdc_cycles;
-	
 	uint64_t dma_accum;
 	uint64_t dma_cycles;
 	
