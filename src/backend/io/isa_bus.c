@@ -76,7 +76,7 @@ void isa_bus_destroy(ISA_BUS* bus) {
 	}
 }
 
-int isa_bus_add_card(ISA_BUS* bus, const char* name) {
+int isa_bus_add_card(ISA_BUS* bus, const char* name, int id) {
 	int index = -1;
 
 	/* find first removed card */
@@ -101,6 +101,7 @@ int isa_bus_add_card(ISA_BUS* bus, const char* name) {
 	bus->cards[index].read_io_byte = NULL;
 	bus->cards[index].param = NULL;
 	bus->cards[index].flags = ISA_CARD_FLAG_ENABLED;
+	bus->cards[index].id = id;
 
 	if (name != NULL) {
 		strncpy_s(bus->cards[index].name, ISA_CARD_NAME_SIZE, name, ISA_CARD_NAME_SIZE - 1);
@@ -184,6 +185,24 @@ int isa_bus_write_io_byte(ISA_BUS* bus, uint16_t port, uint8_t value) {
 		}
 	}
 	return 0; /* Write not handled */
+}
+
+int isa_bus_is_card_installed(ISA_BUS* bus, int id) {
+	for (int i = 0; i < bus->card_index; ++i) {
+		if (IS_ACTIVE(i) && id == bus->cards[i].id) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int isa_bus_get_card_index(ISA_BUS* bus, int id) {
+	for (int i = 0; i < bus->card_index; ++i) {
+		if (IS_ACTIVE(i) && id == bus->cards[i].id) {
+			return i;
+		}
+	}
+	return -1;
 }
 
 void isa_bus_reset(ISA_BUS* bus) {
@@ -300,3 +319,4 @@ int isa_card_remove_param(ISA_BUS* bus, int index) {
 	dbg_print("Failed to remove PARAM from isa card; Index out of range or card removed. index = %d, removed = %d\n", index, IS_REMOVED(index));
 	return 1;
 }
+

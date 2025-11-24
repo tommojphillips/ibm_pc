@@ -55,6 +55,7 @@ typedef void(*ISA_BUS_UPDATE)(void* param, uint64_t cycles);
 
 /* ISA Card */
 typedef struct ISA_CARD {
+	int id;
 	int mregion_index;              /* index to mregion. used if the isa card has memory mapped (HAS_MM) */
 	uint32_t flags;                 /* flags for the isa card. ISA_CARD_FLAG_XXX */
 	ISA_BUS_WRITE_IO write_io_byte; /* write io byte. used if the isa card has io mapped (HAS_IO) */
@@ -87,8 +88,9 @@ void isa_bus_destroy(ISA_BUS* bus);
 /* Add an ISA Card to the bus and enables it
    bus:     the isa bus instance
    name:    the isa card name; can be NULL
+   id:      the isa card ID. Must be unique.
    Returns: -1 if error or the index of the added card on success */
-int isa_bus_add_card(ISA_BUS* bus, const char* name);
+int isa_bus_add_card(ISA_BUS* bus, const char* name, int id);
 
 /* ISA Bus Read port mapped io
 	port:   the IO port address
@@ -130,6 +132,18 @@ int isa_bus_enable_card(ISA_BUS* bus, int index);
    index:   the isa card index
    Returns: 1 if error or 0 on success */
 int isa_bus_disable_card(ISA_BUS* bus, int index);
+
+/* Is an ISA Card installed on the bus?
+   bus:     the isa bus instance
+   id:      the isa card ID
+   Returns: 0 if not found or 1 on found */
+int isa_bus_is_card_installed(ISA_BUS* bus, int id);
+
+/* Get the index of an ISA Card on the bus
+   bus:     the isa bus instance
+   id:      the isa card ID
+   Returns: -1 if not found or index of card if found */
+int isa_bus_get_card_index(ISA_BUS* bus, int id);
 
 /* Add a memory region to an ISA Card
    bus:     the isa bus instance
