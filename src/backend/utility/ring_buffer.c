@@ -75,3 +75,17 @@ int ring_buffer_peek(RING_BUFFER* rb, int head_offset, uint8_t* out) {
 int ring_buffer_is_empty(RING_BUFFER* rb) {
 	return rb->count == 0;
 }
+int ring_buffer_discard(RING_BUFFER* rb, int amount) {
+	if (rb == NULL || amount < 0) {
+		return 1;
+	}
+
+	if (amount > rb->count) {
+		amount = rb->count;
+	}
+
+	rb->head = (rb->head + amount) % rb->buffer_size;
+	rb->count -= amount;
+
+	return 0;
+}

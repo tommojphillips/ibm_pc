@@ -52,4 +52,10 @@ int ring_buffer_peek(RING_BUFFER* rb, int head_offset, uint8_t* out);
 	Returns: 0 if the ring buffer has any bytes. Otherwise returns 1. */
 int ring_buffer_is_empty(RING_BUFFER* rb);
 
+/* Discard x amount of elements in the buffer.
+	rb: The ring buffer struct
+	amount: Amount of elements to discard from the head. 
+	Returns: 0 if success. Otherwise returns 1. (rb NULL, amount < 0) */
+int ring_buffer_discard(RING_BUFFER* rb, int amount);
+
 #endif
