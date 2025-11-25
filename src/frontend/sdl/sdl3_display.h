@@ -24,6 +24,8 @@ typedef struct DISPLAY_CONFIG {
 	int display_scale_mode;
 	int texture_scale_mode;
 	int allow_display_disable;
+	int delay_display_disable;
+	uint64_t delay_display_disable_time;
 	char mda_font[FONT_PATH_LEN];
 	char cga_font[FONT_PATH_LEN];
 } DISPLAY_CONFIG;
@@ -36,6 +38,9 @@ typedef struct DISPLAY_INSTANCE {
 	float cell_h;
 	int on_render_index;
 	float offset_y;
+	uint8_t video_enabled;
+	uint8_t waiting_to_disable;
+	uint64_t last_disable_time;
 	DISPLAY_CONFIG config;
 } DISPLAY_INSTANCE;
 

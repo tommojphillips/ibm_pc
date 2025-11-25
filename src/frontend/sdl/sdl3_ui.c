@@ -164,6 +164,9 @@ static void draw_display_submenu(DISPLAY_INSTANCE* display) {
 	}
 
 	ui_menu_checkbox("Allow Display Disable", &display->config.allow_display_disable);
+	ui_begin_disabled(!display->config.allow_display_disable);
+	ui_menu_checkbox("Delay Display Disable", &display->config.delay_display_disable);
+	ui_end_disabled();
 
 	sel = window_instance_is_full_screen(display->window);
 	if (ui_menu_button("Full Screen", sel, 1)) {

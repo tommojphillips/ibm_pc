@@ -110,11 +110,45 @@ static void draw_overscan(const WINDOW_INSTANCE* const window, const COLOR_RGB c
 	SDL_RenderFillRect(window->renderer, &rect);
 }
 
-/* Dummy display */
 static void disabled_draw_screen(const DISPLAY_INSTANCE* const display) {
 	const COLOR_RGB col = { 0, 0, 0 };
 	fill_screen(display, col);
 }
+static int check_disable_wait(DISPLAY_INSTANCE* display, uint8_t hw_enable) {
+	if (!display->config.allow_display_disable) {
+		return 0;
+	}
+
+	if (display->config.delay_display_disable) {
+		uint64_t now = timing_get_ticks_ms();
+
+		if (hw_enable) {
+			display->video_enabled = 1;
+			display->waiting_to_disable = 0;
+		}
+		else {
+			if (!display->waiting_to_disable) {
+				display->waiting_to_disable = 1;
+				display->last_disable_time = now;
+			}
+
+			if (display->waiting_to_disable && (now - display->last_disable_time >= display->config.delay_display_disable_time)) {
+				display->video_enabled = 0;
+			}
+		}
+	}
+	else {
+		display->video_enabled = hw_enable;
+	}
+
+	if (!display->video_enabled) {
+		disabled_draw_screen(display);
+		return 1;
+	}
+	return 0;
+}
+
+/* Dummy display */
 static void dummy_draw_screen(DISPLAY_INSTANCE* display, void* param2) {
 	(void)param2;
 	disabled_draw_screen(display);
@@ -201,11 +235,10 @@ static void mda_text_draw_screen(DISPLAY_INSTANCE* display, MDA* mda) {
 	}
 }
 static void mda_draw_screen(DISPLAY_INSTANCE* display, MDA* mda) {
-	if (display->config.allow_display_disable && !(mda->mode & MDA_MODE_VIDEO_ENABLE)) {
-		disabled_draw_screen(display);
+	if (check_disable_wait(display, mda->mode & MDA_MODE_VIDEO_ENABLE)) {
 		return;
 	}
-	
+
 	mda_text_draw_screen(display, mda);
 }
 
@@ -492,11 +525,10 @@ static void cga_text_draw_screen(DISPLAY_INSTANCE* display, CGA* cga) {
 }
 
 static void cga_draw_screen(DISPLAY_INSTANCE* display, CGA* cga) {
-	if (display->config.allow_display_disable && !(cga->mode & CGA_MODE_VIDEO_ENABLE)) {
-		disabled_draw_screen(display);
+	if (check_disable_wait(display, cga->mode & CGA_MODE_VIDEO_ENABLE)) {
 		return;
 	}
-
+	
 	if (cga->mode & CGA_MODE_GRAPHICS) {
 		if (cga->mode & CGA_MODE_GRAPHICS_RES_HI) {
 			cga_graphics_draw_hi_res(display, cga);
