@@ -10,6 +10,8 @@
 
 #define I8259_PIC_ICW_COUNT 0x04
 
+typedef struct I8086 I8086;
+
  /* Assert INTR callback */
 typedef void(*I8259_PIC_ASSERT_INTR)(uint8_t type);
 
@@ -24,13 +26,14 @@ typedef struct I8259_PIC {
 	uint8_t initialized;
 	uint8_t icw_index;
 	uint8_t icw[I8259_PIC_ICW_COUNT];
-	I8259_PIC_ASSERT_INTR assert_intr;
-	I8259_PIC_DEASSERT_INTR deassert_intr;
+	I8086* i8086;
 } I8259_PIC;
 
 void i8259_pic_reset(I8259_PIC* pic);
 uint8_t i8259_pic_read_io_byte(I8259_PIC* pic, uint8_t io_address);
 void i8259_pic_write_io_byte(I8259_PIC* pic, uint8_t io_address, uint8_t value);
+
+void i8259_pic_init(I8259_PIC* pic, I8086* i8086);
 
 /* Get Interrupt
    Returns: 1 if the pic asserted INTR. 0 otherwise */

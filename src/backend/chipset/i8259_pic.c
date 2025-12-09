@@ -7,6 +7,8 @@
 
 #include "i8259_pic.h"
 
+#include "i8086.h"
+
 #define ICW1_REQ_ICW4 0x01
 #define ICW1_SNGL     0x02
 #define ICW1_ADI      0x04
@@ -57,13 +59,20 @@ static uint8_t get_pending_irq(I8259_PIC* pic) {
 
 static void assert_intr(I8259_PIC* pic, uint8_t irq) {
 	uint8_t type = pic->icw[1] | irq;
-	pic->assert_intr(type);
-	dbg_print("[PIC] IRQ %d\n", irq);
+	pic->i8086->intr = 1;
+	pic->i8086->intr_type = type;
+	dbg_print("[PIC] Assert INTR (%d)\n", irq);
+}
+
+static void deassert_intr(I8259_PIC* pic) {
+	pic->i8086->intr = 0;
+	pic->i8086->intr_type = 0;
+	dbg_print("[PIC] Deassert INTR (%d)\n", irq);
 }
 
 static void icw1(I8259_PIC* pic, uint8_t value) {
 	/* ICW1 intitalization */
-	pic->deassert_intr();
+	deassert_intr(pic);
 	i8259_pic_reset(pic);
 	pic->icw[pic->icw_index++] = value;
 	dbg_print("[PIC] ICW1 = %02X\n", value);
@@ -206,8 +215,7 @@ void i8259_pic_clear_interrupt(I8259_PIC* pic, uint8_t irq) {
 
 		/* Deassert INTR if IR is in service and IR has highest priority */
 		if ((irq & 0x07) == highest_irq) {
-			pic->deassert_intr();
-			dbg_print("[PIC] Deasserted INTR (%d)\n", irq);
+			deassert_intr(pic);
 		}
 
 		pic->irr &= ~mask;
@@ -263,4 +271,8 @@ void i8259_pic_reset(I8259_PIC* pic) {
 	for (int i = 0; i < I8259_PIC_ICW_COUNT; ++i) {
 		pic->icw[i] = 0;
 	}
+}
+
+void i8259_pic_init(I8259_PIC* pic, I8086* i8086) {
+	pic->i8086 = i8086;
 }
