@@ -17,7 +17,6 @@ typedef struct I8237_DMA_CHANNEL {
 	uint16_t latched_word_count;
 	uint8_t mode;
 	uint8_t terminal_count;
-	uint8_t terminal_count_reached;
 	uint8_t request;
 	uint8_t masked;
 	uint8_t page;
@@ -35,7 +34,7 @@ typedef struct I8237_DMA {
 	void(*write_mem_byte)(uint32_t, uint8_t);  // write mem byte
 } I8237_DMA;
 
-void i8237_dma_init(I8237_DMA* dma);
+void i8237_dma_init(I8237_DMA* dma, uint8_t(*read_mem_byte)(uint32_t), void(*write_mem_byte)(uint32_t, uint8_t));
 void i8237_dma_reset(I8237_DMA* dma);
 void i8237_dma_update(I8237_DMA* dma);
 
@@ -50,5 +49,8 @@ uint8_t i8237_dma_read_byte(I8237_DMA* dma, uint8_t channel);
 
 uint8_t i8237_dma_channel_ready(I8237_DMA* dma, uint8_t channel);
 uint8_t i8237_dma_terminal_count(I8237_DMA* dma, uint8_t channel);
+
+void i8237_dma_request_service(I8237_DMA* dma, uint8_t channel);
+void i8237_dma_clear_service(I8237_DMA* dma, uint8_t channel);
 
 #endif

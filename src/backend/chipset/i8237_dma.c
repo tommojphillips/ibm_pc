@@ -70,7 +70,7 @@
 #define SERVICE_MODE_BLOCK         0x80
 #define SERVICE_MODE_CASCADE       0xC0
 
-uint8_t address_read(I8237_DMA* dma, uint8_t channel) {
+static uint8_t address_read(I8237_DMA* dma, uint8_t channel) {
 	uint8_t address = 0;
 	if (dma->flipflop) {
 		address = (dma->channels[channel].current_address >> 8) & 0xFF;
@@ -84,7 +84,7 @@ uint8_t address_read(I8237_DMA* dma, uint8_t channel) {
 	return address;
 }
 
-uint8_t wc_read(I8237_DMA* dma, uint8_t channel) {
+static uint8_t wc_read(I8237_DMA* dma, uint8_t channel) {
 	uint8_t word_count = 0;
 	if (dma->flipflop) {
 		word_count = (dma->channels[channel].current_word_count >> 8) & 0xFF;
@@ -98,19 +98,21 @@ uint8_t wc_read(I8237_DMA* dma, uint8_t channel) {
 	return word_count;
 }
 
-uint8_t page_read(I8237_DMA* dma, uint8_t channel) {
+static uint8_t page_read(I8237_DMA* dma, uint8_t channel) {
 	return dma->channels[channel].page;
 }
 
-uint8_t status_read(I8237_DMA* dma) {
-	return dma->status;
+static uint8_t status_read(I8237_DMA* dma) {
+	uint8_t status = dma->status;
+	dma->status &= 0xF0; /* Clear TC bits after read */
+	return status;
 }
 
-uint8_t temp_read(I8237_DMA* dma) {
+static uint8_t temp_read(I8237_DMA* dma) {
 	return dma->temp;
 }
 
-void address_write(I8237_DMA* dma, uint8_t channel, uint8_t value) {
+static void address_write(I8237_DMA* dma, uint8_t channel, uint8_t value) {
 	if (dma->flipflop) {
 		dma->channels[channel].latched_address = (dma->channels[channel].latched_address & 0xFF) | ((uint16_t)value << 8);
 	}
@@ -123,7 +125,7 @@ void address_write(I8237_DMA* dma, uint8_t channel, uint8_t value) {
 	dma->flipflop = !dma->flipflop;
 }
 
-void wc_write(I8237_DMA* dma, uint8_t channel, uint8_t value) {
+static void wc_write(I8237_DMA* dma, uint8_t channel, uint8_t value) {
 	if (dma->flipflop) {
 		dma->channels[channel].latched_word_count = (dma->channels[channel].latched_word_count & 0xFF) | ((uint16_t)value << 8);
 	}
@@ -136,11 +138,11 @@ void wc_write(I8237_DMA* dma, uint8_t channel, uint8_t value) {
 	dma->flipflop = !dma->flipflop;
 }
 
-void page_write(I8237_DMA* dma, uint8_t channel, uint8_t value) {
+static void page_write(I8237_DMA* dma, uint8_t channel, uint8_t value) {
 	dma->channels[channel].page = value;
 }
 
-void command_write(I8237_DMA* dma, uint8_t value) {
+static void command_write(I8237_DMA* dma, uint8_t value) {
 
 #ifdef DBG_PRINT
 	if (IS_RISING_EDGE(COMMAND_DISABLE, dma->command, value)) {
@@ -159,33 +161,32 @@ void command_write(I8237_DMA* dma, uint8_t value) {
 	dma->command = value;
 }
 
-void mask_write(I8237_DMA* dma, uint8_t value) {
+static void mask_write(I8237_DMA* dma, uint8_t value) {
 	for (int i = 0; i < DMA_CHANNEL_COUNT; ++i) {
-		dma->channels[i].masked = value & 0x01;
-		value >>= 1;
+		dma->channels[i].masked = (value >> i) & 0x01;
 	}
 }
 
-void mask_clear(I8237_DMA* dma) {
+static void mask_clear(I8237_DMA* dma) {
 	for (int i = 0; i < DMA_CHANNEL_COUNT; ++i) {
 		dma->channels[i].masked = 0;
 	}
 }
 
-void channel_mask_write(I8237_DMA* dma, uint8_t value) {
+static void channel_mask_write(I8237_DMA* dma, uint8_t value) {
 	dma->channels[value & 0x03].masked = (value >> 0x02) & 0x01;
 }
 
-void channel_mode_write(I8237_DMA* dma, uint8_t value) {
+static void channel_mode_write(I8237_DMA* dma, uint8_t value) {
 	dma->channels[value & 0x03].mode = value;
 	dma->channels[value & 0x03].terminal_count = 0;
 }
 
-void flipflop_clear(I8237_DMA* dma) {
+static void flipflop_clear(I8237_DMA* dma) {
 	dma->flipflop = 0;
 }
 
-void master_clear(I8237_DMA* dma) {
+static void master_clear(I8237_DMA* dma) {
 	for (int i = 0; i < DMA_CHANNEL_COUNT; ++i) {
 		dma->channels[i].masked = 1;
 	}
@@ -195,10 +196,8 @@ void master_clear(I8237_DMA* dma) {
 	dma->flipflop = 0;
 }
 
-void req_write(I8237_DMA* dma, uint8_t value) {
-	(void)dma;
-	(void)value;
-	dbg_print("[DMA] REQ WRITE not implemented\n");
+static void req_write(I8237_DMA* dma, uint8_t value) {
+	dma->channels[value & 0x03].request = (value >> 0x02) & 0x01;
 }
 
 void i8237_dma_reset(I8237_DMA* dma) {
@@ -212,7 +211,6 @@ void i8237_dma_reset(I8237_DMA* dma) {
 		dma->channels[i].page = 0;
 		dma->channels[i].request = 0;
 		dma->channels[i].terminal_count = 0;
-		dma->channels[i].terminal_count_reached = 0;
 	}
 
 	dma->command = 0;
@@ -252,7 +250,7 @@ uint8_t i8237_dma_read_io_byte(I8237_DMA* dma, uint8_t io_address) {
 		case PORT_READ_STATUS_REGISTER:
 			return status_read(dma);
 		case PORT_READ_TEMP_REGISTER:
-			return status_read(dma);
+			return temp_read(dma);
 		
 		default:
 			dbg_print("[DMA] reading unimplemented IO\n");
@@ -338,14 +336,29 @@ void i8237_dma_write_io_byte(I8237_DMA* dma, uint8_t io_address, uint8_t value) 
 	}
 }
 
-void i8237_dma_init(I8237_DMA* dma) {
-	dma->read_mem_byte = NULL;
-	dma->write_mem_byte = NULL;
+void i8237_dma_init(I8237_DMA* dma, uint8_t(*read_mem_byte)(uint32_t), void(*write_mem_byte)(uint32_t, uint8_t)) {
+	dma->read_mem_byte = read_mem_byte;
+	dma->write_mem_byte = write_mem_byte;
 }
 
 void i8237_dma_update(I8237_DMA* dma) {
-	(void)dma;
-	/* Nothing to do */
+	for (int i = 0; i < DMA_CHANNEL_COUNT; ++i) {
+		if (dma->request & (1 << i)) {
+			switch (dma->channels[i].mode & MODE_SERVICE_MODE) {
+				case SERVICE_MODE_SINGLE:
+					switch (dma->channels[i].mode & MODE_TRANSFER_TYPE) {
+						case TRANSFER_TYPE_READ:
+						case TRANSFER_TYPE_VERFIY:
+							if (i == 0) {
+								i8237_dma_read_byte(dma, 0);
+							}
+							break;
+					}
+					dma->request &= ~(1 << i);
+					break;
+			}
+		}
+	}
 }
 
 uint32_t i8237_dma_get_transfer_address(I8237_DMA* dma, uint8_t channel) {
@@ -359,45 +372,32 @@ uint32_t i8237_dma_get_transfer_size(I8237_DMA* dma, uint8_t channel) {
 void i8237_dma_write_byte(I8237_DMA* dma, uint8_t channel, uint8_t value) {
 
 	uint32_t transfer_address = i8237_dma_get_transfer_address(dma, channel);
-	
+	if ((dma->channels[channel].mode & MODE_TRANSFER_TYPE) == TRANSFER_TYPE_WRITE) {
+		dma->write_mem_byte(transfer_address, value);
+	}
+
 	switch (dma->channels[channel].mode & MODE_ADDRESS_MODE) {
 		case ADDRESS_MODE_INC:
-			if (dma->channels[channel].current_word_count > 0) {
-
-				if ((dma->channels[channel].mode & MODE_TRANSFER_TYPE) == TRANSFER_TYPE_WRITE) {
-					dma->write_mem_byte(transfer_address, value);
-				}
-
-				dma->channels[channel].current_address += 1;
-				dma->channels[channel].current_word_count -= 1;
-			}
-			else if (dma->channels[channel].terminal_count == 0) {
-
-				if ((dma->channels[channel].mode & MODE_TRANSFER_TYPE) == TRANSFER_TYPE_WRITE) {
-					dma->write_mem_byte(transfer_address, value);
-				}
-
-				if ((dma->channels[channel].mode & MODE_AUTO_INIT) == AUTO_INIT_ON) {
-					/* Reload */
-					dma->channels[channel].current_address = dma->channels[channel].latched_address;
-					dma->channels[channel].current_word_count = dma->channels[channel].latched_word_count;
-				}
-				else {
-					dma->channels[channel].terminal_count = 1;
-				}
-
-				/* Set TC */
-				dma->channels[channel].terminal_count_reached = 1;
-			}
-			else {
-				/* tried to write on terminal count */
-			}
+			dma->channels[channel].current_address += 1;
 			break;
 		
 		case ADDRESS_MODE_DEC:
-			/* Not Implemented */
-			dbg_print("[DMA] DEC ADDRESS MODE not implemented\n");
+			dma->channels[channel].current_address -= 1;
 			break;
+	}
+
+	if (dma->channels[channel].current_word_count == 0) {
+		if (dma->channels[channel].mode & MODE_AUTO_INIT) {
+			dma->channels[channel].current_address = dma->channels[channel].latched_address;
+			dma->channels[channel].current_word_count = dma->channels[channel].latched_word_count;
+		}
+		else {
+			dma->channels[channel].terminal_count = 1;
+		}
+		dma->status |= (1 << channel); /* Set TC bit in status register */
+	}
+	else {
+		dma->channels[channel].current_word_count--;
 	}
 }
 uint8_t i8237_dma_read_byte(I8237_DMA* dma, uint8_t channel) {
@@ -407,40 +407,30 @@ uint8_t i8237_dma_read_byte(I8237_DMA* dma, uint8_t channel) {
 	}
 
 	uint32_t transfer_address = i8237_dma_get_transfer_address(dma, channel);
-	uint8_t data = 0;
+	uint8_t data = dma->read_mem_byte(transfer_address);
 
 	switch (dma->channels[channel].mode & MODE_ADDRESS_MODE) {
 		case ADDRESS_MODE_INC:
-			if (dma->channels[channel].current_word_count > 0) {
-				data = dma->read_mem_byte(transfer_address);
-
-				dma->channels[channel].current_address += 1;
-				dma->channels[channel].current_word_count -= 1;
-			}
-			else if (dma->channels[channel].terminal_count == 0) {
-				data = dma->read_mem_byte(transfer_address);
-
-				if ((dma->channels[channel].mode & MODE_AUTO_INIT) == AUTO_INIT_ON) {
-					/* Reload */
-					dma->channels[channel].current_address = dma->channels[channel].latched_address;
-					dma->channels[channel].current_word_count = dma->channels[channel].latched_word_count;
-				}
-				else {
-					dma->channels[channel].terminal_count = 1;
-				}
-
-				/* Set TC */
-				dma->channels[channel].terminal_count_reached = 1;
-			}
-			else {
-				/* tried to read on terminal count */
-			}
+			dma->channels[channel].current_address += 1;
 			break;
 		
 		case ADDRESS_MODE_DEC:
-			/* Not Implemented */
-			dbg_print("[DMA] DEC ADDRESS MODE not implemented\n");
+			dma->channels[channel].current_address -= 1;
 			break;
+	}
+
+	if (dma->channels[channel].current_word_count == 0) {
+		if (dma->channels[channel].mode & MODE_AUTO_INIT) {
+			dma->channels[channel].current_address = dma->channels[channel].latched_address;
+			dma->channels[channel].current_word_count = dma->channels[channel].latched_word_count;
+		}
+		else {
+			dma->channels[channel].terminal_count = 1;
+		}
+		dma->status |= (1 << channel); /* Set TC bit in status register */
+	}
+	else {
+		dma->channels[channel].current_word_count--;
 	}
 
 	return data;
@@ -452,4 +442,11 @@ uint8_t i8237_dma_channel_ready(I8237_DMA* dma, uint8_t channel) {
 
 uint8_t i8237_dma_terminal_count(I8237_DMA* dma, uint8_t channel) {
 	return dma->channels[channel].terminal_count;
+}
+
+void i8237_dma_request_service(I8237_DMA* dma, uint8_t channel) {
+	dma->request |= (1 << channel);
+}
+void i8237_dma_clear_service(I8237_DMA* dma, uint8_t channel) {
+	dma->request &= ~(1 << channel);
 }
