@@ -122,13 +122,45 @@ int file_write_from_buffer(const char* path, void* buff, const size_t buff_size)
 }
 
 const char* file_get_filename(const char* path) {
-	if (path != NULL) {
-		const char* filename = strrchr(path, '/');
-		if (filename == NULL) {
-			filename = strrchr(path, '\\');
-		}
-		return filename ? filename + 1 : path;
+	if (path == NULL) {
+		return NULL;
 	}
+
+	size_t len = strlen(path);
+
+	for (size_t i = len; i-- > 0;) {
+		char c = path[i];
+		if (c == '/' || c == '\\') {
+			return &path[i + 1];
+		}
+	}
+
+	return path;
+}
+
+const char* file_get_extension(const char* path) {
+	if (path == NULL) {
+		return NULL;
+	}
+
+	size_t len = strlen(path);
+	if (len == 0) {
+		return NULL;
+	}
+
+	for (size_t i = len; i-- > 0;) {
+		char c = path[i];
+		if (c == '.') {
+			if (i == 0) { 
+				return NULL;
+			}
+			return &path[i + 1];
+		}
+		if (c == '/' || c == '\\') {
+			break;
+		}
+	}
+
 	return NULL;
 }
 

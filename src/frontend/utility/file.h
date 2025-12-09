@@ -11,6 +11,7 @@ int file_read_into_buffer(const char* path, void* buff, const size_t buff_size, 
 int file_read_alloc_buffer(const char* path, void** buff, size_t* file_size);
 int file_write_from_buffer(const char* path, void* buff, const size_t buff_size);
 const char* file_get_filename(const char* path);
+const char* file_get_extension(const char* path);
 int file_get_file_size(const char* path, size_t* file_size);
 
 #endif
