@@ -11,7 +11,9 @@
 #include "backend/utility/bit_utils.h"
 #include "backend/utility/ring_buffer.h"
 #include "backend/utility/lba.h"
+
 #include "backend/chipset/i8237_dma.h"
+#include "backend/chipset/i8259_pic.h"
 
 /* I/O Port Addresses */
 
@@ -122,6 +124,12 @@
 #define ST3_US1     0x02 /* Unit Select 1; Status of the unit select 1 signal to the FDD */
 #define ST3_US0     0x01 /* Unit Select 0; Status of the unit select 0 signal to the FDD */
 
+#define COMMAND_STATE_IDLE      0 /* Idle; Waiting for command. */
+#define COMMAND_STATE_RECIEVING 1 /* Recieved command byte; Waiting for parameter bytes. */
+#define COMMAND_STATE_RECIEVED  2 /* Recieved all command bytes; Waiting for comand execution. */
+#define COMMAND_STATE_EXECUTING 4 /* Executing command; Setting up command. */
+#define COMMAND_STATE_ASYNC     8 /* Executing command; Waiting for command finish. */
+
 #define CMD_BYTE    0x1F
 #define CMD_MT      0x80
 #define CMD_MFM     0x40
@@ -143,6 +151,9 @@
 
 /* FDC DMA Channel */
 #define FDC_DMA 2
+
+/* FDC IRQ */
+#define FDC_IRQ 6
 
 static void advance_byte_index(FDC* fdc) {
 	fdc->byte_index += 1;
@@ -277,6 +288,14 @@ static void st3(FDC* fdc) {
 	}
 }
 
+static void command_reset(FDC* fdc) {
+	/* Reset command */
+	fdc->command.byte = 0;
+	fdc->command.param_count = 0;
+	fdc->command.state = COMMAND_STATE_IDLE;
+	fdc->command.error = 0;
+}
+
 static void command_set(FDC* fdc, uint8_t command) {
 	/* Set command */
 	fdc->command.byte = command;
@@ -333,12 +352,14 @@ static void command_set(FDC* fdc, uint8_t command) {
 	}
 
 	if (fdc->command.param_count == 0) {
-		fdc->command.recieving = 0;
-		fdc->command.received = 1;
+		fdc->command.state = COMMAND_STATE_RECIEVED;
 	}
 	else {
-		fdc->command.recieving = 1;
-		fdc->command.received = 0;
+		fdc->command.state = COMMAND_STATE_RECIEVING;
+	}
+
+	if (!ring_buffer_is_empty(&fdc->data_register_out)) {
+		dbg_print("[FDC] Command started. OUT FIFO not empty!\n");
 	}
 }
 static void command_set_parameter(FDC* fdc, uint8_t value) {
@@ -347,15 +368,11 @@ static void command_set_parameter(FDC* fdc, uint8_t value) {
 	fdc->command.param_count--;
 
 	if (fdc->command.param_count == 0) {
-		fdc->command.recieving = 0;
-		fdc->command.received = 1;
+		fdc->command.state = COMMAND_STATE_RECIEVED;
 	}
 }
 static void command_finalize(FDC* fdc, uint8_t irq, uint8_t data_direction) {
 	/* Finalize command */
-	if (irq == IRQ) {
-		fdc->do_irq(fdc);
-	}
 
 	if (data_direction == SEND_DATA) {
 		/* FDC has data to send */
@@ -365,23 +382,20 @@ static void command_finalize(FDC* fdc, uint8_t irq, uint8_t data_direction) {
 		/* FDC is ready to receive data */
 		receive_data(fdc);
 	}
-}
-static void command_reset(FDC* fdc, uint8_t irq, uint8_t data_direction) {
-	/* Reset command */
-	fdc->command.byte = 0;
-	fdc->command.param_count = 0;
-	fdc->command.recieving = 0;
-	fdc->command.received = 0;
-	fdc->command.async = 0;
-	fdc->command.error = 0;
+	
+	if (irq == IRQ) {
+		i8259_pic_request_interrupt(fdc->pic_p, FDC_IRQ);
+	}
 
-	command_finalize(fdc, irq, data_direction);
+	if (!ring_buffer_is_empty(&fdc->data_register_in)) {
+		dbg_print("[FDC] Command finalized. IN FIFO not empty!\n");
+	}
+
+	command_reset(fdc);
 }
 static void command_set_async(FDC* fdc) {
 	/* Set command async */
-	fdc->command.recieving = 0;
-	fdc->command.received = 0;
-	fdc->command.async = 1;
+	fdc->command.state = COMMAND_STATE_EXECUTING | COMMAND_STATE_ASYNC;
 }
 static void command_results(FDC* fdc, uint8_t ic, uint8_t irq) {
 	/* Set ST0, ST1, ST2 */
@@ -398,8 +412,8 @@ static void command_results(FDC* fdc, uint8_t ic, uint8_t irq) {
 	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.s);        /* R */
 	ring_buffer_push(&fdc->data_register_out, fdc->command.n);            /* N */
 
-	/* Reset command; set IRQ; send data */
-	command_reset(fdc, irq, SEND_DATA);
+	/* Finish command; set IRQ; send data */
+	command_finalize(fdc, irq, SEND_DATA);
 }
 
 /* Synchronous commands */
@@ -434,10 +448,14 @@ static void cmd_read_data(FDC* fdc) {
 
 	fdc->sector_size = n_to_sector_size(fdc->command.n);
 	fdc->byte_index = 0;
-		
-	dbg_print("[FDC] Read data %s dhs=%u, c=%u, h=%u, s=%u, n=%u, eot=%u, gpl=%u, dtl=%u\n",
-		(fdc->dma ? "DMA" : "PIO"), fdc->command.dhs, fdc->command.chs.c, fdc->command.chs.h, fdc->command.chs.s, 
-		fdc->command.n, fdc->command.eot, fdc->command.gap_len, fdc->command.data_len);
+	
+	uint32_t transfer_address = i8237_dma_get_transfer_address(fdc->dma_p, FDC_DMA);
+	uint32_t transfer_size = i8237_dma_get_transfer_size(fdc->dma_p, FDC_DMA);
+	uint32_t tranfer_sector_count = transfer_size / fdc->sector_size;
+
+	dbg_print("[FDC] Read data %s%s dhs=%u, c=%u, h=%u, s=%u, n=%u, eot=%u, gpl=%u, dtl=%u, t_addr=%x, t_size=%x, t_sectors=%d\n",
+		(fdc->dma ? "DMA" : "PIO"), (fdc->command.byte & CMD_MT) ? " MT" : "", fdc->command.dhs, fdc->command.chs.c, fdc->command.chs.h, fdc->command.chs.s,
+		fdc->command.n, fdc->command.eot, fdc->command.gap_len, fdc->command.data_len, transfer_address, transfer_size, tranfer_sector_count);
 
 	command_set_async(fdc);
 }
@@ -632,7 +650,7 @@ static void cmd_recalibrate(FDC* fdc) {
 	st0(fdc, ST0_NT, ST0_SE);
 
 	/* Finish command */
-	command_reset(fdc, IRQ, RECEIVE_DATA);
+	command_finalize(fdc, IRQ, RECEIVE_DATA);
 
 	dbg_print("[FDC] Recalibrate dhs=%u\n", fdc->command.dhs);
 }
@@ -657,7 +675,7 @@ static void cmd_seek(FDC* fdc) {
 	}
 		
 	/* Finish command */
-	command_reset(fdc, IRQ, RECEIVE_DATA);
+	command_finalize(fdc, IRQ, RECEIVE_DATA);
 
 	dbg_print("[FDC] Seek dhs=%u, ncn=%d\n", fdc->command.dhs, fdc->command.chs.c);
 }
@@ -669,7 +687,7 @@ static void cmd_sense_interrupt(FDC* fdc) {
 	ring_buffer_push(&fdc->data_register_out, fdc->command.chs.c & 0xFF); /* PCN */
 
 	/* Finish command */
-	command_reset(fdc, NO_IRQ, SEND_DATA);
+	command_finalize(fdc, NO_IRQ, SEND_DATA);
 
 	dbg_print("[FDC] Sense interrupt st0=%x, pcn=%d\n", fdc->st0, fdc->command.chs.c);
 }
@@ -688,7 +706,7 @@ static void cmd_sense_drive_status(FDC* fdc) {
 	ring_buffer_push(&fdc->data_register_out, fdc->st3); /* ST3 */
 
 	/* Finish command */
-	command_reset(fdc, NO_IRQ, SEND_DATA);
+	command_finalize(fdc, NO_IRQ, SEND_DATA);
 
 	dbg_print("[FDC] Sense drive status\n");
 }
@@ -732,7 +750,7 @@ static void cmd_specify(FDC* fdc) {
 	}
 
 	/* Finish command */
-	command_reset(fdc, NO_IRQ, RECEIVE_DATA);
+	command_finalize(fdc, NO_IRQ, RECEIVE_DATA);
 
 	dbg_print("[FDC] Specify srt=%d, hut=%d, hlt=%d, nd=%d \n", srt, hut, hlt, nd);
 }
@@ -745,7 +763,7 @@ static void cmd_nop(FDC* fdc) {
 	ring_buffer_push(&fdc->data_register_out, fdc->st0); /* ST0 */
 
 	/* Finish command */
-	command_reset(fdc, NO_IRQ, SEND_DATA);
+	command_finalize(fdc, NO_IRQ, SEND_DATA);
 
 	dbg_print("[FDC] nop %02X\n", fdc->command.byte & CMD_BYTE);
 }
@@ -768,8 +786,8 @@ static void cmd_read_data_async(FDC* fdc) {
 
 		if (i8237_dma_channel_ready(fdc->dma_p, FDC_DMA)) {
 
-			uint32_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
-			
+			size_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
+
 			/* Read data from fdd */
 			uint8_t byte = fdd_read_byte(&fdc->fdd[fdc->fdd_select], offset);
 
@@ -801,7 +819,7 @@ static void cmd_read_track_async(FDC* fdc) {
 
 		if (i8237_dma_channel_ready(fdc->dma_p, FDC_DMA)) {
 
-			uint32_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
+			size_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
 			
 			/* Read data from fdd */
 			uint8_t byte = fdd_read_byte(&fdc->fdd[fdc->fdd_select], offset);
@@ -845,7 +863,7 @@ static void cmd_write_data_async(FDC* fdc) {
 
 		if (i8237_dma_channel_ready(fdc->dma_p, FDC_DMA)) {
 
-			uint32_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
+			size_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
 			
 			/* Read data from dma */
 			uint8_t byte = i8237_dma_read_byte(fdc->dma_p, FDC_DMA);
@@ -884,7 +902,7 @@ static void cmd_format_track_async(FDC* fdc) {
 
 		if (i8237_dma_channel_ready(fdc->dma_p, FDC_DMA)) {
 
-			uint32_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
+			size_t offset = chs_to_offset(fdc->fdd[fdc->fdd_select].geometry, fdc->command.chs, fdc->sector_size, fdc->byte_index);
 			
 			/* Read data from dma */
 			uint8_t byte = i8237_dma_read_byte(fdc->dma_p, FDC_DMA);
@@ -903,6 +921,7 @@ static void cmd_format_track_async(FDC* fdc) {
 
 /* Execute command */
 static void command_execute(FDC* fdc) {
+	fdc->command.state = COMMAND_STATE_EXECUTING;
 	switch (fdc->command.byte & CMD_BYTE) {
 		case CMD_READ_DATA:
 			cmd_read_data(fdc);
@@ -1033,14 +1052,14 @@ static void write_dor(FDC* fdc, uint8_t v) {
 }
 static void write_data(FDC* fdc, uint8_t value) {
 
-	if (!fdc->command.recieving) {
+	if (fdc->command.state == COMMAND_STATE_IDLE) {
 		command_set(fdc, value);
 	}
-	else {
+	else if (fdc->command.state == COMMAND_STATE_RECIEVING) {
 		command_set_parameter(fdc, value);
 	}
 
-	if (fdc->command.received) {
+	if (fdc->command.state == COMMAND_STATE_RECIEVED) {
 		command_execute(fdc);
 	}
 }
@@ -1093,6 +1112,11 @@ void upd765_fdc_destroy(FDC* fdc) {
 	}
 }
 
+void upd765_fdc_init(FDC* fdc, I8237_DMA* dma, I8259_PIC* pic) {
+	fdc->dma_p = dma;
+	fdc->pic_p = pic;
+}
+
 void upd765_fdc_reset(FDC* fdc) {
 	fdc->msr = 0;
 	fdc->dor = 0;
@@ -1103,12 +1127,7 @@ void upd765_fdc_reset(FDC* fdc) {
 	fdc->st2 = 0;
 	fdc->st3 = 0;
 
-	fdc->command.byte = 0;
-	fdc->command.param_count = 0;
-	fdc->command.recieving = 0;
-	fdc->command.received = 0;
-	fdc->command.async = 0;
-	fdc->command.error = 0;
+	command_reset(fdc);
 
 	fdc->sector_size = 0;
 	fdc->byte_index = 0;
@@ -1146,7 +1165,7 @@ void upd765_fdc_write_io_byte(FDC* fdc, uint8_t address, uint8_t value) {
 }
 
 void upd765_fdc_update(FDC* fdc) {
-	if (fdc->command.async) {
+	if (fdc->command.state == (COMMAND_STATE_EXECUTING | COMMAND_STATE_ASYNC)) {
 		command_execute_async(fdc);
 	}
 }

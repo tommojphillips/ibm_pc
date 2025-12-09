@@ -15,6 +15,7 @@
 #define FDD_MAX 4
 
 typedef struct I8237_DMA I8237_DMA;
+typedef struct I8259_PIC I8259_PIC;
 
 #define FDC_ERROR_CRC_ERROR       0x01
 #define FDC_ERROR_OVERRUN         0x02
@@ -28,9 +29,7 @@ typedef struct FDC_COMMAND {
 	
 	uint8_t byte;
 	uint8_t param_count;
-	uint8_t recieving;
-	uint8_t received;
-	uint8_t async;
+	uint8_t state;
 	uint8_t error;
 
 	/* Command Parameters */
@@ -57,7 +56,7 @@ typedef struct FDC {
 	FDC_COMMAND command;
 
 	uint16_t sector_size;
-	uint32_t byte_index;
+	size_t byte_index;
 
 	RING_BUFFER data_register_out;
 	RING_BUFFER data_register_in;
@@ -66,16 +65,13 @@ typedef struct FDC {
 
 	uint64_t accum;  /* cycle accum */
 	
-	void(*do_irq)(void* fdc);
-
-	uint8_t(*read_mem_byte)(uint32_t);         /* read mem byte */
-	void(*write_mem_byte)(uint32_t, uint8_t);  /* write mem byte */
-
-	I8237_DMA* dma_p;                          /* DMA Controller pointer */
+	I8237_DMA* dma_p; /* DMA pointer */
+	I8259_PIC* pic_p; /* PIC pointer */
 } FDC;
 
 int upd765_fdc_create(FDC* fdc);
 void upd765_fdc_destroy(FDC* fdc);
+void upd765_fdc_init(FDC* fdc, I8237_DMA* dma, I8259_PIC* pic);
 
 void upd765_fdc_reset(FDC* fdc);
 uint8_t upd765_fdc_read_io_byte(FDC* fdc, const uint8_t address);
