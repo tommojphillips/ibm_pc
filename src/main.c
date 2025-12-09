@@ -7,11 +7,8 @@
 #include <string.h>
 
 #include <SDL3/SDL_main.h>
-#include <SDL3/SDL.h>
 
 #include "tomi.h"
-
-#include "frontend/utility/file.h"
 
 #include "frontend/sdl/sdl3_common.h"
 #include "frontend/sdl/sdl3_window.h"
@@ -102,6 +99,7 @@ int main(int argc, char** argv) {
 		display_on_video_adapter_changed(display, ibm_pc->config.video_adapter);
 		
 		/* Create UI */
+		ui_context_create(&ui_context);
 		ui_create_renderer(win1->window, win1->renderer);
 		window_instance_add_cb_on_render(win1, ui_update, &ui_context, display);
 		window_instance_add_cb_on_process_event(win1, ui_process_event);
@@ -146,6 +144,7 @@ int main(int argc, char** argv) {
 
 	/* Clean up */
 	ui_destroy();
+	ui_context_destroy(&ui_context);
 
 	args_destroy(var_map);
 	ibm_pc_destroy();
