@@ -10,7 +10,7 @@
 
 #include "backend/utility/ring_buffer.h"
 
-typedef struct KBD KBD;
+typedef struct I8259_PIC I8259_PIC;
 
 typedef struct KBD {
 	uint8_t enabled;
@@ -18,8 +18,7 @@ typedef struct KBD {
 	uint8_t data;
 	uint64_t reset_elapsed;
 	RING_BUFFER key_buffer;
-	void(*request_irq)(KBD* kbd);
-	void(*clear_irq)(KBD* kbd);
+	I8259_PIC* pic_p;
 } KBD;
 
 uint8_t kbd_get_data(KBD* kbd);
@@ -30,5 +29,7 @@ void kbd_tick(KBD* kbd);
 
 int kbd_create(KBD* kbd);
 void kbd_destroy(KBD* kbd);
+
+void kbd_init(KBD* kbd, I8259_PIC* pic);
 
 #endif

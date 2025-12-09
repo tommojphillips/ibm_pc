@@ -8,7 +8,11 @@
 #include "timing.h"
 #include "backend/utility/ring_buffer.h"
 
+#include "backend/chipset/i8259_pic.h"
+
 #define KEYS_SIZE 10
+
+#define KBD_IRQ 1
 
 #define DBG_PRINT
 #ifdef DBG_PRINT
@@ -23,7 +27,7 @@ static void reset_check(KBD* kbd) {
 		kbd->do_reset = 0;
 		ring_buffer_reset(&kbd->key_buffer);
 		kbd->data = 0xAA;
-		kbd->request_irq(kbd);
+		i8259_pic_request_interrupt(kbd->pic_p, KBD_IRQ);
 	}
 }
 
@@ -36,7 +40,7 @@ void kbd_reset(KBD* kbd) {
 }
 
 uint8_t kbd_get_data(KBD* kbd) {
-	kbd->clear_irq(kbd);
+	i8259_pic_clear_interrupt(kbd->pic_p, KBD_IRQ);
 	return kbd->data;
 }
 
@@ -44,7 +48,7 @@ void kbd_set_enable(KBD* kbd, uint8_t enable) {
 	if (enable == 0) {
 		kbd->enabled = 0;
 		kbd->data = 0;
-		kbd->clear_irq(kbd);
+		i8259_pic_clear_interrupt(kbd->pic_p, KBD_IRQ);
 	}
 	else {
 		kbd->enabled = 1;
@@ -68,7 +72,7 @@ void kbd_tick(KBD* kbd) {
 	reset_check(kbd);
 	if (kbd->enabled && !ring_buffer_is_empty(&kbd->key_buffer)) {
 		kbd->data = ring_buffer_pop(&kbd->key_buffer);
-		kbd->request_irq(kbd);
+		i8259_pic_request_interrupt(kbd->pic_p, KBD_IRQ);
 	}
 }
 
@@ -82,4 +86,8 @@ int kbd_create(KBD* kbd) {
 
 void kbd_destroy(KBD* kbd) {
 	ring_buffer_destroy(&kbd->key_buffer);
+}
+
+void kbd_init(KBD* kbd, I8259_PIC* pic) {
+	kbd->pic_p = pic;
 }
