@@ -20,6 +20,7 @@
 #include "video/mda.h"
 #include "video/cga.h"
 #include "fdc/fdc.h"
+#include "hdc/xebec.h"
 #include "keyboard.h"
 
 #include "timing.h"
@@ -85,7 +86,7 @@
 #define MODEL_5150_16_64  0 /* 5150 16-64 KB Motherboard */
 #define MODEL_5150_64_256 1 /* 5150 64-256 KB Motherboard */
 
-#define ISA_BUS_SLOTS 4 /* number of Card Slots on ISA BUS */
+#define ISA_BUS_SLOTS 5 /* number of Card Slots on ISA BUS */
 
 static uint64_t const cpu_cycles_per_frame = (uint64_t)CYCLES_PER_FRAME(CPU_CLOCK);
 static uint64_t const pit_cycles_per_frame = (uint64_t)CYCLES_PER_FRAME(PIT_CLOCK);
@@ -109,6 +110,13 @@ typedef struct {
 	uint8_t write_protect;
 } DISK;
 
+typedef struct {
+	char path[PATH_LEN];
+	uint8_t drive;
+	CHS geometry;
+	XEBEC_HDD_TYPE type;
+} HDD;
+
 typedef struct IBM_PC_CONFIG {
 	uint8_t video_adapter;
 	uint8_t fdc_disks;
@@ -122,6 +130,8 @@ typedef struct IBM_PC_CONFIG {
 	size_t disk_count;
 	ROM* roms;
 	size_t rom_count;
+	HDD* hdds;
+	size_t hdd_count;
 } IBM_PC_CONFIG;
 
 typedef struct IBM_PC {
@@ -136,6 +146,7 @@ typedef struct IBM_PC {
 	I8259_PIC pic;
 	I8255_PPI ppi;
 	FDC fdc;
+	XEBEC_HDC xebec;
 	MDA mda;
 	CGA cga;
 
@@ -146,7 +157,7 @@ typedef struct IBM_PC {
 	
 	uint64_t pit_accum;
 	uint64_t pit_cycles;
-	
+		
 	uint64_t dma_accum;
 	uint64_t dma_cycles;
 	
@@ -165,6 +176,8 @@ typedef struct IBM_PC {
 	int ram_mregion_index;
 
 	uint8_t step;
+	uint32_t breakpoint;
+	uint32_t step_over_target;
 } IBM_PC;
 
 extern IBM_PC* ibm_pc;
@@ -178,8 +191,13 @@ void ibm_pc_update(void);
 
 void ibm_pc_add_rom(ROM* rom);
 void ibm_pc_load_roms(void);
+
 void ibm_pc_add_disk(DISK* disk);
 void ibm_pc_load_disks(void);
+
+void ibm_pc_add_hdd(HDD* hdd);
+void ibm_pc_load_hdds(void);
+
 void ibm_pc_set_config(void);
 
 uint8_t determine_planar_ram_sw(uint20_t planar_ram);

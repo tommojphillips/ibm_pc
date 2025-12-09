@@ -4,8 +4,8 @@
  */
 
 #include <stdint.h>
-#include <stdlib.h>
-#include <memory.h>
+#include <malloc.h>
+#include <string.h>
 
 #include "ibm_pc.h"
 
@@ -16,14 +16,15 @@
 #include "chipset/i8253_pit.h"
 #include "chipset/i8255_ppi.h"
 #include "chipset/i8259_pic.h"
+#include "chipset/i8237_dma.h"
 #include "chipset/nmi.h"
 #include "fdc/fdc.h"
-#include "video/mda.h"
-#include "video/cga.h"
+#include "hdc/xebec.h"
 
 #include "isa_cards/mda_isa_card.h"
 #include "isa_cards/cga_isa_card.h"
 #include "isa_cards/fdc_isa_card.h"
+#include "isa_cards/xebec_isa_card.h"
 
 #include "utility/bit_utils.h"
 
@@ -310,7 +311,7 @@ static uint8_t read_io_byte(uint16_t port) {
 			return i8255_ppi_read_io_byte(&ibm_pc->ppi, port & ~PPI_BASE_ADDRESS);
 		
 		case 0x201: // Gamepad
-			return 0x0;
+			return 0xFF;
 
 		default:
 			dbg_print("read byte from port: %04X\n", port);
@@ -376,13 +377,6 @@ static void write_io_byte(uint16_t port, uint8_t value) {
 			dbg_print("write byte to port: %04X = %02X\n", port, value);
 			break;
 	}
-}
-static uint16_t read_io_word(uint16_t port) {
-	return (read_io_byte(port) | (read_io_byte(port + 1) << 8));
-}
-static void write_io_word(uint16_t port, uint16_t value) {
-	write_io_byte(port, value & 0xFF);
-	write_io_byte(port+1, (value >> 8) & 0xFF);
 }
 
 /* PPI Callbacks */
@@ -465,7 +459,7 @@ static void pcspeaker_set(PC_SPEAKER* pc_speaker, uint8_t input) {
 /* PIT Callbacks */
 static void pit_on_timer0(I8253_TIMER* timer) {
 	/* PIT channel 0 is connected to the system timer interrupt line (IRQ0) on the i8259 PIC */
-
+	
 	switch (timer->ctrl & I8253_PIT_CTRL_MODE) {
 		case I8253_PIT_MODE0: // interrupt on terminal count
 			i8259_pic_request_interrupt(&ibm_pc->pic, IRQ_TIMER0);
@@ -487,7 +481,9 @@ static void pit_on_timer0(I8253_TIMER* timer) {
 	}
 }
 static void pit_on_timer1(I8253_TIMER* timer) {
+	/* PIT channel 1 is connected to the DRAM Refresh. */
 	(void)timer;
+	i8237_dma_request_service(&ibm_pc->dma, 0);
 }
 static void pit_on_timer2(I8253_TIMER* timer) {
 	/* PIT channel 2 is connected to the PC Speaker. */
@@ -507,40 +503,6 @@ static void pit_on_timer2(I8253_TIMER* timer) {
 			pcspeaker_set(&ibm_pc->pc_speaker, timer->out);
 			break;
 	}
-}
-
-/* FDC Callbacks */
-static void fdc_request_irq(FDC* fdc) {
-	(void)fdc;
-	i8259_pic_request_interrupt(&ibm_pc->pic, IRQ_FDC);
-}
-
-/* KBD Callbacks */
-static void kbd_request_irq(KBD* kbd) {
-	(void)kbd;
-	i8259_pic_request_interrupt(&ibm_pc->pic, IRQ_KBD);
-}
-static void kbd_clear_irq(KBD* kbd) {
-	(void)kbd;
-	i8259_pic_clear_interrupt(&ibm_pc->pic, IRQ_KBD);
-}
-
-/* DMA Callbacks */
-void dma_write_byte(uint8_t channel, uint8_t value) {
-	i8237_dma_write_byte(&ibm_pc->dma, channel, value);
-}
-uint8_t dma_read_byte(uint8_t channel) {
-	return i8237_dma_read_byte(&ibm_pc->dma, channel);
-}
-
-/* I8086 INTR Callbacks */
-void i8086_assert_intr(uint8_t type) {
-	ibm_pc->cpu.intr = 1;
-	ibm_pc->cpu.intr_type = type;
-}
-void i8086_deassert_intr(void) {
-	ibm_pc->cpu.intr = 0;
-	ibm_pc->cpu.intr_type = 0;
 }
 
 static void kbd_update(void) {
@@ -591,6 +553,14 @@ static void cpu_update(void) {
 		return;
 	}
 	ibm_pc->cpu_cycles += ibm_pc->cpu.cycles;
+
+	if (ibm_pc->breakpoint != 0 && ibm_pc->breakpoint == i8086_get_physical_address(ibm_pc->cpu.segments[SEG_CS], ibm_pc->cpu.ip)) {
+		ibm_pc->step = 1;
+	}
+	if (ibm_pc->step_over_target != 0 && ibm_pc->step_over_target == i8086_get_physical_address(ibm_pc->cpu.segments[SEG_CS], ibm_pc->cpu.ip)) {
+		ibm_pc->step_over_target = 0;
+		ibm_pc->step = 1;
+	}
 
 //#define bios5150_24_04_81
 //#define bios5150_27_10_82
@@ -843,6 +813,19 @@ static void cpu_update(void) {
 		case 0xC8003: /* */
 			// ibm_pc->step = 1;
 			break;
+
+		case 0xFE018:
+			dbg_print("STGTST\n");
+			break;
+
+		case 0xFE3EA: // TEST.11
+			dbg_print("test.11 (skip mem test)\n");
+			ibm_pc->cpu.ip = 0xE43B; // skip mem test; goto TEST 12
+			break;
+
+		case 0xC81FA:
+			//ibm_pc->step = 1;
+			break;
 	}
 #endif
 }
@@ -960,6 +943,34 @@ void ibm_pc_load_disks(void) {
 	}
 }
 
+void ibm_pc_add_hdd(HDD* hdd) {
+	void* new_hdds = realloc(ibm_pc->config.hdds, sizeof(HDD) * (ibm_pc->config.hdd_count + 1));
+	if (new_hdds == NULL) {
+		return;
+	}
+
+	memcpy((uint8_t*)new_hdds + (sizeof(HDD) * ibm_pc->config.hdd_count), hdd, sizeof(HDD));
+	ibm_pc->config.hdds = new_hdds;
+	ibm_pc->config.hdd_count++;
+}
+void ibm_pc_load_hdds(void) {
+	if (ibm_pc->config.hdds == NULL) {
+		return;
+	}
+	for (int i = 0; i < ibm_pc->config.hdd_count; ++i) {
+		if (ibm_pc->config.hdds[i].path != '\0') {
+			uint8_t drive = 0;
+			char_to_drive(ibm_pc->config.hdds[i].drive, &drive);
+			drive &= 0x1;
+			if (drive < 2) {
+				xebec_hdc_eject_hdd(&ibm_pc->xebec, drive);
+				xebec_hdc_set_geometry_override_hdd(&ibm_pc->xebec, drive, ibm_pc->config.hdds[i].geometry, ibm_pc->config.hdds[i].type);
+				xebec_hdc_insert_hdd(&ibm_pc->xebec, drive, ibm_pc->config.hdds[i].path);
+			}
+		}
+	}
+}
+
 void ibm_pc_init(void) {
 	/* IBM PC Initialize */
 
@@ -977,9 +988,7 @@ void ibm_pc_init(void) {
 	ibm_pc->cpu.funcs.read_mem_byte  = read_mm_byte;
 	ibm_pc->cpu.funcs.write_mem_byte = write_mm_byte;
 	ibm_pc->cpu.funcs.read_io_byte   = read_io_byte;
-	ibm_pc->cpu.funcs.read_io_word   = read_io_word;
 	ibm_pc->cpu.funcs.write_io_byte  = write_io_byte;
-	ibm_pc->cpu.funcs.write_io_word  = write_io_word;
 
 	/* Setup 8086 Mnemonics */	
 	ibm_pc->mnem.state = &ibm_pc->cpu;
@@ -995,25 +1004,21 @@ void ibm_pc_init(void) {
 	i8253_pit_set_timer_cb(&ibm_pc->pit, 1, pit_on_timer1, NULL);
 	i8253_pit_set_timer_cb(&ibm_pc->pit, 2, pit_on_timer2, &ibm_pc->timer2_gate);
 
-	/* Setup PIC callbacks */
-	ibm_pc->pic.assert_intr = i8086_assert_intr;
-	ibm_pc->pic.deassert_intr = i8086_deassert_intr;
+	/* Setup PIC */
+	i8259_pic_init(&ibm_pc->pic, &ibm_pc->cpu);
 
-	/* Setup FDC callbacks */
-	ibm_pc->fdc.do_irq = fdc_request_irq;
-	ibm_pc->fdc.read_mem_byte = read_mm_byte;
-	ibm_pc->fdc.write_mem_byte = write_mm_byte;
-	ibm_pc->fdc.dma_p = &ibm_pc->dma;
+	/* Setup FDC */
+	upd765_fdc_init(&ibm_pc->fdc, &ibm_pc->dma, &ibm_pc->pic);
 
-	/* Setup KBD callbacks */
-	ibm_pc->kbd.request_irq = kbd_request_irq;
-	ibm_pc->kbd.clear_irq = kbd_clear_irq;
+	/* Setup XEBEC */
+	xebec_hdc_init(&ibm_pc->xebec, &ibm_pc->dma, &ibm_pc->pic);
+
+	/* Setup KBD */
+	kbd_init(&ibm_pc->kbd, &ibm_pc->pic);
 
 	/* Setup DMA */
-	i8237_dma_init(&ibm_pc->dma);
-	ibm_pc->dma.read_mem_byte = read_mm_byte;
-	ibm_pc->dma.write_mem_byte = write_mm_byte;
-
+	i8237_dma_init(&ibm_pc->dma, read_mm_byte, write_mm_byte);
+	
 	/* Setup Memory Map Regions */
 
 	/* PLANAR/IO RAM - placeholder; need ram mregion index for ibm_pc_set_config() */
@@ -1038,7 +1043,11 @@ void ibm_pc_init(void) {
 	/* CGA Card; VIDEO RAM - B8000 - BBFFF (0x4000 16K) mirrored up to 0xBFFFF (0x8000 32K) x2 */
 	isa_card_add_cga(&ibm_pc->isa_bus, &ibm_pc->cga);
 
+	/* FDC Card; */
 	isa_card_add_fdc(&ibm_pc->isa_bus, &ibm_pc->fdc);
+	
+	/* XEBEC Card; */
+	isa_card_add_xebec(&ibm_pc->isa_bus, &ibm_pc->xebec);
 
 	/* After all mregions are set; validate the memory map */
 	memory_map_validate(&ibm_pc->mm);
@@ -1050,6 +1059,9 @@ void ibm_pc_init(void) {
 
 	/* Load Disks */
 	ibm_pc_load_disks();
+
+	/* Load Hdds */
+	ibm_pc_load_hdds();
 
 	/* Setup timing; we base all timing off 60 HZ */
 	timing_init_frame(&ibm_pc->time, HZ_TO_MS(FRAME_RATE_HZ));
@@ -1063,6 +1075,10 @@ void ibm_pc_destroy_config(void) {
 	if (ibm_pc->config.disks != NULL) {
 		free(ibm_pc->config.disks);
 		ibm_pc->config.disks = NULL;
+	}
+	if (ibm_pc->config.hdds != NULL) {
+		free(ibm_pc->config.hdds);
+		ibm_pc->config.hdds = NULL;
 	}
 }
 
@@ -1080,7 +1096,7 @@ int ibm_pc_create(void) {
 		return 1; /* memory_map_create() reports errors to console */
 	}
 	
-	/* Create ISA Bus; 4 ISA Card slots */
+	/* Create ISA Bus; 5 ISA Card slots */
 	if (isa_bus_create(&ibm_pc->isa_bus, &ibm_pc->mm, ISA_BUS_SLOTS)) {
 		return 1; /* isa_bus_create() reports errors to console */
 	}
@@ -1088,6 +1104,11 @@ int ibm_pc_create(void) {
 	/* Create fdc */
 	if (upd765_fdc_create(&ibm_pc->fdc)) {
 		return 1; /* upd765_fdc_create() reports errors to console */
+	}
+
+	/* Create hdc */
+	if (xebec_hdc_create(&ibm_pc->xebec)) {
+		return 1; /* xebec_hdc_create() reports errors to console */
 	}
 
 	/* Create kbd */
@@ -1103,6 +1124,9 @@ void ibm_pc_destroy(void) {
 
 		/* Destroy kbd */
 		kbd_destroy(&ibm_pc->kbd);
+
+		/* Destroy hdc */
+		xebec_hdc_destroy(&ibm_pc->xebec);
 
 		/* Destroy fdc */
 		upd765_fdc_destroy(&ibm_pc->fdc);
