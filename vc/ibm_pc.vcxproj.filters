@@ -20,9 +20,6 @@
     <Filter Include="backend\video">
       <UniqueIdentifier>{9f3fa484-3019-40e0-baaa-0b2bb5d2c5d2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="backend\fdd">
-      <UniqueIdentifier>{f83a601d-0f48-43bb-b1ca-7e729ec7da36}</UniqueIdentifier>
-    </Filter>
     <Filter Include="backend\utility">
       <UniqueIdentifier>{df28bed1-d2fd-46ce-a33e-b2a17019ed4a}</UniqueIdentifier>
     </Filter>
@@ -37,6 +34,12 @@
     </Filter>
     <Filter Include="frontend\tomi">
       <UniqueIdentifier>{e094c9d4-ba41-43f8-ab16-70d5d696cb17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend\hdc">
+      <UniqueIdentifier>{de160341-a05c-49c8-9ddb-1570a5545fa4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="backend\fdc">
+      <UniqueIdentifier>{f83a601d-0f48-43bb-b1ca-7e729ec7da36}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -69,9 +72,6 @@
     </ClCompile>
     <ClCompile Include="..\src\backend\video\mda.c">
       <Filter>backend\video</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\backend\fdd\fdc.c">
-      <Filter>backend\fdd</Filter>
     </ClCompile>
     <ClCompile Include="..\src\backend\ibm_pc.c">
       <Filter>backend</Filter>
@@ -107,9 +107,6 @@
     <ClCompile Include="..\src\backend\timing.c">
       <Filter>backend</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\backend\fdd\lba.c">
-      <Filter>backend\fdd</Filter>
-    </ClCompile>
     <ClCompile Include="..\lib\i8086\src\i8086 _mnem.c">
       <Filter>backend\I8086</Filter>
     </ClCompile>
@@ -124,9 +121,6 @@
     </ClCompile>
     <ClCompile Include="..\lib\i8086\src\i8086_muldiv.c">
       <Filter>backend\I8086</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\backend\fdd\fdd.c">
-      <Filter>backend\fdd</Filter>
     </ClCompile>
     <ClCompile Include="..\src\frontend\sdl\sdl3_ui.c">
       <Filter>frontend\sdl</Filter>
@@ -149,6 +143,30 @@
     </ClCompile>
     <ClCompile Include="..\src\backend\utility\ring_buffer.c">
       <Filter>backend\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\hdc\xebec.c">
+      <Filter>backend\hdc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\isa_cards\fdc_isa_card.c">
+      <Filter>backend\isa_cards</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\isa_cards\xebec_isa_card.c">
+      <Filter>backend\isa_cards</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\fdc\fdc.c">
+      <Filter>backend\fdc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\fdc\fdd.c">
+      <Filter>backend\fdc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\utility\vhd.c">
+      <Filter>backend\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\utility\lba.c">
+      <Filter>backend\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\backend\hdc\xebec_hdd.c">
+      <Filter>backend\hdc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -181,9 +199,6 @@
     </ClInclude>
     <ClInclude Include="..\src\backend\video\mda.h">
       <Filter>backend\video</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\backend\fdd\fdc.h">
-      <Filter>backend\fdd</Filter>
     </ClInclude>
     <ClInclude Include="..\src\backend\ibm_pc.h">
       <Filter>backend</Filter>
@@ -224,9 +239,6 @@
     <ClInclude Include="..\src\backend\timing.h">
       <Filter>backend</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\backend\fdd\lba.h">
-      <Filter>backend\fdd</Filter>
-    </ClInclude>
     <ClInclude Include="..\lib\i8086\src\i8086.h">
       <Filter>backend\I8086</Filter>
     </ClInclude>
@@ -241,9 +253,6 @@
     </ClInclude>
     <ClInclude Include="..\lib\i8086\src\i8086_muldiv.h">
       <Filter>backend\I8086</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\backend\fdd\fdd.h">
-      <Filter>backend\fdd</Filter>
     </ClInclude>
     <ClInclude Include="..\src\frontend\sdl\sdl3_ui.h">
       <Filter>frontend\sdl</Filter>
@@ -266,6 +275,33 @@
     </ClInclude>
     <ClInclude Include="..\src\backend\utility\ring_buffer.h">
       <Filter>backend\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\hdc\xebec.h">
+      <Filter>backend\hdc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\utility\lba.h">
+      <Filter>backend\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\utility\vhd.h">
+      <Filter>backend\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\isa_cards\fdc_isa_card.h">
+      <Filter>backend\isa_cards</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\isa_cards\xebec_isa_card.h">
+      <Filter>backend\isa_cards</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\fdc\fdc.h">
+      <Filter>backend\fdc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\fdc\fdd.h">
+      <Filter>backend\fdc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\hdc\xebec_hdd.h">
+      <Filter>backend\hdc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\backend\io\isa_cards.h">
+      <Filter>backend\io</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -23,17 +23,20 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerEnvironment>PATH=%PATH%;..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64;$(ExecutablePath)</LocalDebuggerEnvironment>
     <LocalDebuggerCommandArguments>-c test.ini</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArgumentsHistory>-c test.ini|</LocalDebuggerCommandArgumentsHistory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|x64'">
     <LocalDebuggerWorkingDirectory>$(ProjectDir)..\bin</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerEnvironment>PATH=%PATH%;..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64;$(ExecutablePath)</LocalDebuggerEnvironment>
     <LocalDebuggerCommandArguments>-c test.ini</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArgumentsHistory>-c test.ini|</LocalDebuggerCommandArgumentsHistory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerWorkingDirectory>$(ProjectDir)..\bin</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerEnvironment>PATH=%PATH%;..\lib\SDL3\lib\x64;..\lib\SDL3_ttf\lib\x64;..\lib\UI\bin\x64;$(ExecutablePath)</LocalDebuggerEnvironment>
     <LocalDebuggerCommandArguments>-c test.ini</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArgumentsHistory>-c test.ini|</LocalDebuggerCommandArgumentsHistory>
   </PropertyGroup>
 </Project>

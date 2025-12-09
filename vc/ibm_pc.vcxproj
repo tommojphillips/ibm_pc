@@ -37,42 +37,42 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-ASAN|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <EnableASAN>true</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -265,16 +265,20 @@
     <ClCompile Include="..\src\backend\chipset\nmi.c" />
     <ClCompile Include="..\src\backend\fdc\fdc.c" />
     <ClCompile Include="..\src\backend\fdc\fdd.c" />
-    <ClCompile Include="..\src\backend\fdd\lba.c" />
+    <ClCompile Include="..\src\backend\hdc\xebec_hdd.c" />
+    <ClCompile Include="..\src\backend\hdc\xebec.c" />
     <ClCompile Include="..\src\backend\ibm_pc.c" />
     <ClCompile Include="..\src\backend\io\isa_bus.c" />
     <ClCompile Include="..\src\backend\io\memory_map.c" />
     <ClCompile Include="..\src\backend\isa_cards\cga_isa_card.c" />
     <ClCompile Include="..\src\backend\isa_cards\fdc_isa_card.c" />
     <ClCompile Include="..\src\backend\isa_cards\mda_isa_card.c" />
+    <ClCompile Include="..\src\backend\isa_cards\xebec_isa_card.c" />
     <ClCompile Include="..\src\backend\keyboard.c" />
     <ClCompile Include="..\src\backend\timing.c" />
     <ClCompile Include="..\src\backend\utility\ring_buffer.c" />
+    <ClCompile Include="..\src\backend\utility\lba.c" />
+    <ClCompile Include="..\src\backend\utility\vhd.c" />
     <ClCompile Include="..\src\backend\video\cga.c" />
     <ClCompile Include="..\src\backend\video\crtc_6845.c" />
     <ClCompile Include="..\src\backend\video\mda.c" />
@@ -306,17 +310,22 @@
     <ClInclude Include="..\src\backend\chipset\nmi.h" />
     <ClInclude Include="..\src\backend\fdc\fdc.h" />
     <ClInclude Include="..\src\backend\fdc\fdd.h" />
-    <ClInclude Include="..\src\backend\fdd\lba.h" />
+    <ClInclude Include="..\src\backend\hdc\xebec_hdd.h" />
+    <ClInclude Include="..\src\backend\hdc\xebec.h" />
     <ClInclude Include="..\src\backend\ibm_pc.h" />
     <ClInclude Include="..\src\backend\io\isa_bus.h" />
+    <ClInclude Include="..\src\backend\io\isa_cards.h" />
     <ClInclude Include="..\src\backend\io\memory_map.h" />
     <ClInclude Include="..\src\backend\isa_cards\cga_isa_card.h" />
     <ClInclude Include="..\src\backend\isa_cards\fdc_isa_card.h" />
     <ClInclude Include="..\src\backend\isa_cards\mda_isa_card.h" />
+    <ClInclude Include="..\src\backend\isa_cards\xebec_isa_card.h" />
     <ClInclude Include="..\src\backend\keyboard.h" />
     <ClInclude Include="..\src\backend\timing.h" />
     <ClInclude Include="..\src\backend\utility\bit_utils.h" />
     <ClInclude Include="..\src\backend\utility\ring_buffer.h" />
+    <ClInclude Include="..\src\backend\utility\lba.h" />
+    <ClInclude Include="..\src\backend\utility\vhd.h" />
     <ClInclude Include="..\src\backend\video\cga.h" />
     <ClInclude Include="..\src\backend\video\crtc_6845.h" />
     <ClInclude Include="..\src\backend\video\mda.h" />
