@@ -62,6 +62,35 @@ static const TOMI_STRUCT disk_def = {
 	TOMI_STRUCT_DEF(disk_fields, DISK)
 };
 
+static const TOMI_FIELD chs_fields[] = {
+	TOMI_FIELD_U16("c", CHS, c),
+	TOMI_FIELD_U8("h", CHS, h),
+	TOMI_FIELD_U8("s", CHS, s),
+};
+
+static const TOMI_STRUCT chs_def = {
+	TOMI_STRUCT_DEF(chs_fields, CHS)
+};
+
+static const TOMI_ENUM hdd_type_def[] = {
+	{ "None",   XEBEC_HDD_TYPE_NONE },
+	{ "Type1",  XEBEC_HDD_TYPE_1    },
+	{ "Type2",  XEBEC_HDD_TYPE_2    },
+	{ "Type13", XEBEC_HDD_TYPE_13   },
+	{ "Type16", XEBEC_HDD_TYPE_16   },
+};
+
+static const TOMI_FIELD hdd_fields[] = {
+	TOMI_FIELD_STR("path", HDD, path),
+	TOMI_FIELD_U8("drive", HDD, drive),
+	TOMI_FIELD_STRUCT("geometry", HDD, geometry, &chs_def),
+	TOMI_FIELD_ENUM_U32("type", HDD, type, hdd_type_def),
+};
+
+static const TOMI_STRUCT hdd_def = {
+	TOMI_STRUCT_DEF(hdd_fields, HDD)
+};
+
 static const TOMI_SETTING setting_map[] = {
 	TOMI_SETTING_BOOL("dbg_ui"),
 
@@ -76,6 +105,7 @@ static const TOMI_SETTING setting_map[] = {
 	TOMI_SETTING_U8("sw2"),
 	TOMI_SETTING_STRUCT_ARRAY("disk", IBM_PC_CONFIG, &disk_def, disks, disk_count),
 	TOMI_SETTING_STRUCT_ARRAY("rom", IBM_PC_CONFIG, &rom_def, roms, rom_count),
+	TOMI_SETTING_STRUCT_ARRAY("hdd", IBM_PC_CONFIG, &hdd_def, hdds, hdd_count),
 
 	/* DISPLAY */
 	TOMI_SETTING_ENUM_U8("texture_scale_mode", texture_scale_def),
@@ -144,6 +174,8 @@ void args_set_default(ARGS* args) {
 	args->pc_config->rom_count = 0;
 	args->pc_config->disks = NULL;
 	args->pc_config->disk_count = 0;
+	args->pc_config->hdds = NULL;
+	args->pc_config->hdd_count = 0;
 
 	args->display_config->correct_aspect_ratio = 1;
 	args->display_config->scanline_emu = 1;
@@ -440,6 +472,7 @@ int args_parse_ini(TOMI_VAR* var_map, ARGS* args) {
 	set_var(&args->pc_config->sw2);
 	set_var(args->pc_config); /* disk struct array */
 	set_var(args->pc_config); /* rom struct array */
+	set_var(args->pc_config); /* hdd struct array */
 
 	set_var(&args->display_config->texture_scale_mode);
 	set_var(&args->display_config->display_scale_mode);

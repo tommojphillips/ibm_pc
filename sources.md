@@ -16,9 +16,17 @@ Notes:
 
  ---
 
- | IBM Disk Drive 5 1/4"         |                                                                                               |
+ | IBM Diskette Drive 5 1/4"     |                                                                                               |
  | ----------------------------- | --------------------------------------------------------------------------------------------- |
- | `IBM 5 1/4" Disk Drive`       | https://www.minuszerodegrees.net/oa/OA%20-%20IBM%205.25%20Diskette%20Drive.pdf                |
+ | `IBM 5 1/4" Diskette Drive`   | https://www.minuszerodegrees.net/oa/OA%20-%20IBM%205.25%20Diskette%20Drive.pdf                |
+
+ ---
+
+ | IBM 20MB Fixed Disk Drive (Xebec)    |                                                                                               |
+ | ------------------------------------ | --------------------------------------------------------------------------------------------- |
+ | `IBM 20MB Fixed Disk Drive`          | https://minuszerodegrees.net/oa/OA%20-%20IBM%20PC%2020MB%20Fixed%20Disk%20Drive%20Adapter.pdf |
+ | `Variations`                         | https://minuszerodegrees.net/ibm_xebec/ibm_xebec.htm                                          |
+ | `Power on Diagnostics`               | https://minuszerodegrees.net/ibm_xebec/ibm_xebec_pod.htm                                      |
 
  ---
  
@@ -69,9 +77,10 @@ Notes:
  | FDC i8272 (NEC uPD765)    |                                                                                                           |
  | ------------------------- | --------------------------------------------------------------------------------------------------------- |
  | `i8272A datasheet`        | http://www.threedee.com/jcm/terak/docs/Intel%208272A%20Floppy%20Controller.pdf                            |
+ | `i8272A datasheet`        | https://theretroweb.com/chip/documentation/d8272a-6713edc32e814878067755.pdf                              |
  | `uPD765 preliminary`      | https://bitsavers.org/components/nec/_appNotes/AN08_uPD765_preliminary_197902.pdf                         |
  | `uPD765 datasheet`        | https://www.bitsavers.org/components/nec/_dataSheets/uPD765_Data_Sheet_Dec78.pdf                          |
- | `datasheet`               | http://dunfield.classiccmp.org/r/765.pdf                                                                  |
+ | `uPD765 datasheet`        | http://dunfield.classiccmp.org/r/765.pdf                                                                  |
  | `cpc wiki`                | https://www.cpcwiki.eu/index.php/765_FDC                                                                  |
  | `osdev wiki`              | https://wiki.osdev.org/Floppy_Disk_Controller                                                             |
 
