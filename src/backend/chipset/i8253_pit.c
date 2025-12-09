@@ -190,7 +190,7 @@ static void i8253_timer_write(I8253_TIMER* timer, uint8_t value) {
 			else {
 				timer->count_register = (value << 8) | (timer->count_register & 0x00FF);
 				i8253_timer_load_counter(timer);
-				
+
 				if ((timer->ctrl & I8253_PIT_CTRL_MODE) == I8253_PIT_MODE0) {
 					// A load will stop a timer in MODE0 and set output low
 					i8253_timer_set_output(timer, 0);
@@ -217,14 +217,14 @@ static uint8_t i8253_timer_read(I8253_TIMER* timer) {
 			break;
 
 		case RW_BOTH: // LSB then MSB
-			if (timer->load_state == LOAD_STATE_LSB) {
+			if (timer->read_state == LOAD_STATE_LSB) {
 				v = timer->counter_latch & 0xFF;
-				timer->load_state = LOAD_STATE_MSB;
+				timer->read_state = LOAD_STATE_MSB;
 			}
 			else {
 				timer->count_is_latched = 0;
 				v = (timer->counter_latch >> 8) & 0xFF;
-				timer->load_state = LOAD_STATE_LSB;
+				timer->read_state = LOAD_STATE_LSB;
 			}
 			break;
 	}
@@ -246,6 +246,7 @@ static void i8253_pit_control_write(I8253_PIT* pit, uint8_t value) {
 		pit->timer[i].count_is_latched = 0;
 		pit->timer[i].counter = 0;
 		pit->timer[i].channel_state = I8253_TIMER_STATE_WAITING_FOR_RELOAD;
+		pit->timer[i].read_state = LOAD_STATE_LSB;
 		pit->timer[i].load_state = LOAD_STATE_LSB;
 		pit->timer[i].load_type = LOAD_TYPE_INIT;
 		
@@ -278,8 +279,6 @@ static void i8253_pit_control_write(I8253_PIT* pit, uint8_t value) {
 				break;
 		}
 	}
-
-	pit->timer[i].load_state = 0;
 }
 
 uint8_t i8253_pit_read(I8253_PIT* pit, uint8_t i) {
@@ -320,6 +319,7 @@ void i8253_pit_reset(I8253_PIT* pit) {
 		pit->timer[i].count_register = 0;
 		pit->timer[i].out = 0;
 		pit->timer[i].gate = 0;
+		pit->timer[i].read_state = LOAD_STATE_LSB;
 		pit->timer[i].load_state = LOAD_STATE_LSB;
 		pit->timer[i].load_type = LOAD_TYPE_INIT;
 		pit->timer[i].channel_state = I8253_TIMER_STATE_WAITING_FOR_RELOAD;

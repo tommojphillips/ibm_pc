@@ -59,8 +59,8 @@ typedef struct I8253_TIMER {
 	uint8_t ctrl;
 	uint8_t active;
 	uint8_t out;
+	uint8_t read_state;
 	uint8_t load_state;
-
 	uint8_t load_type;
 	uint8_t channel_state;
 	uint8_t gate;
