@@ -16,7 +16,7 @@ typedef struct CHS {
 } CHS;
 
 /* Logical Block Addressing */
-typedef uint32_t LBA;
+typedef size_t LBA;
 
 /* LBA to CHS
  geometry: (in) Geometry
@@ -36,10 +36,12 @@ void chs_advance_sector(const CHS geometry, CHS* const chs);
 void chs_set(CHS* const dest, const CHS src);
 void chs_reset(CHS* const dest);
 
-uint32_t lba_to_offset(LBA lba, uint16_t sector_size, uint32_t index);
-LBA offset_to_lba(uint32_t offset, uint16_t sector_size, uint32_t index);
+size_t lba_to_offset(LBA lba, uint16_t sector_size, size_t index);
+LBA offset_to_lba(size_t offset, uint16_t sector_size, size_t index);
 
-uint32_t chs_to_offset(const CHS geometry, CHS const chs, uint16_t sector_size, uint32_t index);
-CHS offset_to_chs(const CHS geometry, uint32_t offset, uint16_t sector_size, uint32_t index);
+size_t chs_to_offset(const CHS geometry, const CHS chs, uint16_t sector_size, size_t index);
+CHS offset_to_chs(const CHS geometry, size_t offset, uint16_t sector_size, size_t index);
+
+size_t chs_get_total_byte_count(const CHS geometry, uint16_t sector_size);
 
 #endif
