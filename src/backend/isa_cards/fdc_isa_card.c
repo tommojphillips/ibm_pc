@@ -3,8 +3,10 @@
  * FDC ISA Card
  */
 
-#include "backend/io/isa_bus.h"
+#include <stdint.h>
 #include "backend/fdc/fdc.h"
+#include "backend/io/isa_bus.h"
+#include "backend/io/isa_cards.h"
 
 #define FDC_BASE_ADDRESS 0x3F0 // Base port address of the FDC
 
@@ -44,7 +46,7 @@ static void isa_fdc_update(FDC* fdc, uint64_t cycles) {
 }
 
 int isa_card_add_fdc(ISA_BUS* bus, FDC* fdc) {
-	int card = isa_bus_add_card(bus, "FDC Card");
+	int card = isa_bus_add_card(bus, "FDC Card", ISA_CARD_FDC);
 	isa_card_add_param(bus, card, fdc);
 	isa_card_add_io(bus, card, isa_fdc_write_io_byte, isa_fdc_read_io_byte);
 	isa_card_add_reset(bus, card, upd765_fdc_reset);

@@ -6,10 +6,11 @@
 #include <stdint.h>
 #include "backend/video/cga.h"
 #include "backend/io/isa_bus.h"
+#include "backend/io/isa_cards.h"
 
 #define CGA_BASE_ADDRESS CGA_IO_BASE_ADDRESS // Base port address of the MDA Card
 
-int isa_cga_write_io_byte(CGA* cga, uint16_t port, uint8_t value) {
+static int isa_cga_write_io_byte(CGA* cga, uint16_t port, uint8_t value) {
 	switch (port) {
 		case CGA_BASE_ADDRESS + 0x0: // CGA Index
 		case CGA_BASE_ADDRESS + 0x1: // CGA Data
@@ -28,7 +29,7 @@ int isa_cga_write_io_byte(CGA* cga, uint16_t port, uint8_t value) {
 	return 0;
 }
 
-int isa_cga_read_io_byte(CGA* cga, uint16_t port, uint8_t* value) {
+static int isa_cga_read_io_byte(CGA* cga, uint16_t port, uint8_t* value) {
 	switch (port) {
 		case CGA_BASE_ADDRESS + 0x0: // CGA Index
 		case CGA_BASE_ADDRESS + 0x1: // CGA Data
@@ -47,11 +48,10 @@ int isa_cga_read_io_byte(CGA* cga, uint16_t port, uint8_t* value) {
 	return 0;
 }
 
-void isa_cga_update(CGA* cga, uint64_t cycles) {
+static void isa_cga_update(CGA* cga, uint64_t cycles) {
 	/* cga cycles are 3/1 of cpu cycles */
 	const uint64_t cycle_target = 1; // CPU cycles
 	const uint64_t cycle_factor = 3; // factor
-
 	cga->accum += cycles * cycle_factor;
 	while (cga->accum >= cycle_target) {
 		cga->accum -= cycle_target;
@@ -61,7 +61,7 @@ void isa_cga_update(CGA* cga, uint64_t cycles) {
 
 int isa_card_add_cga(ISA_BUS* bus, CGA* cga) {
 	/* CGA Card; VIDEO RAM - B8000 - BBFFF (0x4000 16K) mirrored up to 0xBFFFF (0x8000 32K) x2 */
-	int card = isa_bus_add_card(bus, "CGA Card");
+	int card = isa_bus_add_card(bus, "CGA Card", ISA_CARD_CGA);
 	isa_card_add_mm(bus, card, CGA_MM_BASE_ADDRESS, 0x8000, CGA_MM_ADDRESS_MASK, MREGION_FLAG_NONE);
 	isa_card_add_param(bus, card, cga);
 	isa_card_add_io(bus, card, isa_cga_write_io_byte, isa_cga_read_io_byte);
