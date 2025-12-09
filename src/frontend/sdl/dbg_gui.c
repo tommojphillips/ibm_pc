@@ -26,9 +26,6 @@
 #define dbg_print(x, ...)
 #endif
 
- /* Get 20bit address SEG:ADDR */
-#define PHYS_ADDRESS(seg, offset) ((((uint20_t)seg << 4) + ((offset) & 0xFFFF)) & 0xFFFFF)
-
 enum {
 	IRQ_TIMER0 = 0x00,
 	IRQ_KBD    = 0x01,
@@ -112,7 +109,7 @@ void dbg_gui_render(WINDOW_INSTANCE* instance, DBG_GUI* gui) {
 	
 	sprintf(gui->str, "DMA %6llu cycles", ibm_pc->dma_cycles);
 	SDL_RenderDebugText(instance->renderer, 10.0f, instance->transform.h - 60.0f, gui->str);
-	
+		
 	sprintf(gui->str, "PIT %6llu cycles", ibm_pc->pit_cycles);
 	SDL_RenderDebugText(instance->renderer, 10.0f, instance->transform.h - 40.0f, gui->str);
 	
@@ -130,8 +127,8 @@ void dbg_gui_render(WINDOW_INSTANCE* instance, DBG_GUI* gui) {
 		sprintf(gui->str, "%04X.%04X: %s", ibm_pc->mnem.segment, ip, ibm_pc->mnem.str);
 		SDL_RenderDebugText(instance->renderer, 10.0f, h, gui->str);
 		
-		for (int j = 0; j < ibm_pc->mnem.counter; ++j) {
-			sprintf(gui->str + (j * 3), " %02X", ibm_pc->cpu.funcs.read_mem_byte(PHYS_ADDRESS(ibm_pc->cpu.segments[SEG_CS], ip + j)));
+		for (uint16_t j = 0; j < ibm_pc->mnem.counter; ++j) {
+			sprintf(gui->str + (j * 3), " %02X", ibm_pc->cpu.funcs.read_mem_byte(i8086_get_physical_address(ibm_pc->cpu.segments[SEG_CS], ip + j)));
 		}
 		SDL_RenderDebugText(instance->renderer, 280.0f, h, gui->str);
 		
