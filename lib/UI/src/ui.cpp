@@ -493,6 +493,55 @@ int ui_dipswitch_u32(const char* label, uint32_t* state, uint32_t enable_mask) {
 }
 
 
+int ui_text_input(const char* label, char* buffer, size_t buffer_len) {
+	if (InputText(label, buffer, buffer_len, 0, NULL, NULL)) {
+		return 1;
+	}
+	return 0;
+}
+
+void ui_push_id(int id) {
+	PushID(id);
+}
+
+void ui_pop_id() {
+	PopID();
+}
+
+int ui_draw_circle(const char* id, float radius, int segments, int selected) {
+	ImVec2 pos = GetCursorScreenPos();
+	ImDrawList* dl = GetWindowDrawList();
+	
+	ImGuiStyle& style = GetStyle();
+	float line_h = GetTextLineHeight();     // height of text line
+	float diameter = radius * 2.0f;
+	float offset_y = (line_h - diameter) * 0.5f;
+	ImVec2 center = { pos.x + radius, pos.y + offset_y + radius };
+	
+	ImU32 col = 0;
+
+	ImVec2 mouse = GetIO().MousePos;
+	float dx = mouse.x - center.x;
+	float dy = mouse.y - center.y;
+	bool inside = (dx * dx + dy * dy) <= (radius * radius);
+
+	if (selected) {
+		col = ColorConvertFloat4ToU32(style.Colors[ImGuiCol_ButtonActive]);
+	}
+	else if (inside) {
+		col = ColorConvertFloat4ToU32(style.Colors[ImGuiCol_ButtonHovered]);
+	}
+	else {
+		col = ColorConvertFloat4ToU32(style.Colors[ImGuiCol_Button]);
+	}
+
+	InvisibleButton(id, { radius * 2, radius * 2 });
+	dl->AddCircleFilled(center, radius, col, segments);
+	
+
+	return inside && IsMouseClicked(ImGuiMouseButton_Left);
+}
+
 void ui_separator(void) {
 	Separator();
 }

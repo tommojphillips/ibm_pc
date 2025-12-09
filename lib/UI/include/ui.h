@@ -223,7 +223,14 @@ UI_EXPORT int ui_dipswitch_u8(const char* label, uint8_t* state, uint8_t enable_
 UI_EXPORT int ui_dipswitch_u16(const char* label, uint16_t* state, uint16_t enable_mask);
 UI_EXPORT int ui_dipswitch_u32(const char* label, uint32_t* state, uint32_t enable_mask);
 
+UI_EXPORT int ui_text_input(const char* label, char* buffer, size_t buffer_len);
+
 UI_EXPORT void ui_separator(void);
+
+UI_EXPORT void ui_push_id(int id);
+UI_EXPORT void ui_pop_id(void);
+
+UI_EXPORT int ui_draw_circle(const char* id, float radius, int segments, int selected);
 
 #ifdef __cplusplus
 };
