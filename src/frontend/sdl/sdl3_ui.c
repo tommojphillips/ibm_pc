@@ -374,9 +374,9 @@ static void draw_dipswitch_submenu(void) {
 
 		case MODEL_5160:
 			sw1_mask = 0xFF;
-			sw2_mask = 0x1F;
+			sw2_mask = 0x0;
 			planar_ram_max = 256;
-			total_ram_max = 736;
+			total_ram_max = 640;
 			total_ram_min = 64;
 			ram_inc_below_planar_max = 64;
 			ram_inc_above_planar_max = 32;
@@ -421,33 +421,45 @@ static void draw_dipswitch_submenu(void) {
 			ibm_pc->config.sw1_provided = 1;
 		}
 	}
-
-	ui_button("SW2: ");
-	ui_same_line_spacing(0);
-	sw = ~ibm_pc->config.sw2; /* invert sw like on planar */
-	if (ui_dipswitch_u8("##sw2_dp", &sw, sw2_dp_mask)) {
-		ibm_pc->config.sw2 = ~sw; /* invert sw back if changed */
-		ibm_pc_set_config();
-	}
-	ui_same_line_spacing(0);
-	if (ibm_pc->config.sw2_provided) {
-		if (ui_button("Manual##dp2")) {
-			ibm_pc->config.sw2_provided = 0;
+	if (ibm_pc->config.model == MODEL_5150_16_64 || ibm_pc->config.model == MODEL_5150_64_256) {
+		ui_button("SW2: ");
+		ui_same_line_spacing(0);
+		sw = ~ibm_pc->config.sw2; /* invert sw like on planar */
+		if (ui_dipswitch_u8("##sw2_dp", &sw, sw2_dp_mask)) {
+			ibm_pc->config.sw2 = ~sw; /* invert sw back if changed */
+			ibm_pc_set_config();
+		}
+		ui_same_line_spacing(0);
+		if (ibm_pc->config.sw2_provided) {
+			if (ui_button("Manual##dp2")) {
+				ibm_pc->config.sw2_provided = 0;
+			}
+		}
+		else {
+			if (ui_button("Auto##dp2")) {
+				ibm_pc->config.sw2_provided = 1;
+			}
 		}
 	}
 	else {
-		if (ui_button("Auto##dp2")) {
-			ibm_pc->config.sw2_provided = 1;
-		}
+		ibm_pc->config.sw2_provided = 0;
 	}
-
 	ui_separator();
 	
 	if (!ibm_pc->config.sw1_provided) {
+		int sel = 0;
+
+		if (ibm_pc->config.model == MODEL_5160) {
+			sel = !(ibm_pc->config.sw1 & SW1_CONTINUOUSLY_POST);
+			if (ui_menu_button("Continuous POST", sel, 1)) {
+				ibm_pc->config.sw1 ^= SW1_CONTINUOUSLY_POST;
+				ibm_pc_set_config();
+			}
+		}
 
 		if (ui_begin_menu("Adapter")) {
 
-			int sel = (ibm_pc->config.sw1 & SW1_DISPLAY_MASK) == SW1_DISPLAY_MDA_80X25;
+			sel = (ibm_pc->config.sw1 & SW1_DISPLAY_MASK) == SW1_DISPLAY_MDA_80X25;
 			if (ui_menu_button("MDA", sel, !sel)) {
 				ibm_pc->config.sw1 &= ~SW1_DISPLAY_MASK;
 				ibm_pc->config.sw1 |= SW1_DISPLAY_MDA_80X25;
@@ -475,22 +487,37 @@ static void draw_dipswitch_submenu(void) {
 		}
 
 		if (ui_begin_menu("Floppy drives")) {
+			int sel = 0;
 
-			int sel = (ibm_pc->config.sw1 & SW1_HAS_FDC) == 0;
-			if (ui_menu_button("0##floppy_drives", sel, !sel)) {
-				ibm_pc->config.sw1 &= ~SW1_HAS_FDC;
-				ibm_pc->config.sw1 &= ~SW1_DISKS_MASK;
-				ibm_pc_set_config();
-			}
-
-			for (uint8_t k = 1; k <= 4; ++k) {
-				sel = (ibm_pc->config.sw1 & SW1_HAS_FDC) == SW1_HAS_FDC && (ibm_pc->config.sw1 & SW1_DISKS_MASK) == (k - 1) << 6;
-				sprintf(&str[0], "%d##floppy_drives", k);
-				if (ui_menu_button(str, sel, !sel)) {
-					ibm_pc->config.sw1 |= SW1_HAS_FDC;
+			if (ibm_pc->config.model == MODEL_5150_16_64 || ibm_pc->config.model == MODEL_5150_64_256) {
+				sel = (ibm_pc->config.sw1 & SW1_HAS_FDC) == 0;
+				if (ui_menu_button("0##floppy_drives", sel, !sel)) {
+					ibm_pc->config.sw1 &= ~SW1_HAS_FDC;
 					ibm_pc->config.sw1 &= ~SW1_DISKS_MASK;
-					ibm_pc->config.sw1 |= (k - 1) << 6;
 					ibm_pc_set_config();
+				}
+
+
+				for (uint8_t k = 1; k <= 4; ++k) {
+					sel = (ibm_pc->config.sw1 & SW1_HAS_FDC) == SW1_HAS_FDC && (ibm_pc->config.sw1 & SW1_DISKS_MASK) == (k - 1) << 6;
+					sprintf(&str[0], "%d##floppy_drives", k);
+					if (ui_menu_button(str, sel, !sel)) {
+						ibm_pc->config.sw1 |= SW1_HAS_FDC;
+						ibm_pc->config.sw1 &= ~SW1_DISKS_MASK;
+						ibm_pc->config.sw1 |= (k - 1) << 6;
+						ibm_pc_set_config();
+					}
+				}
+			}
+			else {
+				for (uint8_t k = 1; k <= 4; ++k) {
+					sel = (ibm_pc->config.sw1 & SW1_DISKS_MASK) == (k - 1) << 6;
+					sprintf(&str[0], "%d##floppy_drives", k);
+					if (ui_menu_button(str, sel, !sel)) {
+						ibm_pc->config.sw1 &= ~SW1_DISKS_MASK;
+						ibm_pc->config.sw1 |= (k - 1) << 6;
+						ibm_pc_set_config();
+					}
 				}
 			}
 			ui_end_menu();
@@ -574,27 +601,37 @@ static void draw_dipswitch_submenu(void) {
 		ui_separator();
 	}
 		
-	ui_text("Has FPU:    %s", (ibm_pc->config.sw1 & SW1_HAS_FPU) == SW1_HAS_FPU ? "Yes" : "No");
+	if (ibm_pc->config.model == MODEL_5160) {
+		ui_text("Continuous POST: %s", (ibm_pc->config.sw1& SW1_CONTINUOUSLY_POST) ? "No" : "Yes");
+		ui_separator();
+	}
+
+	ui_text("Has FPU:         %s", (ibm_pc->config.sw1 & SW1_HAS_FPU) == SW1_HAS_FPU ? "Yes" : "No");
 	ui_separator();
 	
-	ui_text("Adapter:    %s", (ibm_pc->config.sw1 & SW1_DISPLAY_MASK) == SW1_DISPLAY_MDA_80X25 ? "MDA" : (ibm_pc->config.sw1 & SW1_DISPLAY_MASK) == SW1_DISPLAY_CGA_80X25 ? "CGA 80" : (ibm_pc->config.sw1 & SW1_DISPLAY_MASK) == SW1_DISPLAY_CGA_40X25 ? "CGA 40" : "Extension");
+	ui_text("Adapter:         %s", (ibm_pc->config.sw1 & SW1_DISPLAY_MASK) == SW1_DISPLAY_MDA_80X25 ? "MDA" : (ibm_pc->config.sw1 & SW1_DISPLAY_MASK) == SW1_DISPLAY_CGA_80X25 ? "CGA 80" : (ibm_pc->config.sw1 & SW1_DISPLAY_MASK) == SW1_DISPLAY_CGA_40X25 ? "CGA 40" : "Extension");
 	ui_separator();
-	
-	if ((ibm_pc->config.sw1 & SW1_HAS_FDC) == SW1_HAS_FDC) {
-		ui_text("Has FDC:    Yes");
-		ui_text("Num Disks:  %s", (ibm_pc->config.sw1 & SW1_DISKS_MASK) == SW1_DISKS_1 ? "1" : (ibm_pc->config.sw1 & SW1_DISKS_MASK) == SW1_DISKS_2 ? "2" : (ibm_pc->config.sw1 & SW1_DISKS_MASK) == SW1_DISKS_3 ? "3" : "4");
+
+	if (ibm_pc->config.model == MODEL_5150_16_64 || ibm_pc->config.model == MODEL_5150_64_256) {
+		if ((ibm_pc->config.sw1 & SW1_HAS_FDC) == SW1_HAS_FDC) {
+			ui_text("Has FDC:         Yes");
+			ui_text("Num Disks:       %s", (ibm_pc->config.sw1 & SW1_DISKS_MASK) == SW1_DISKS_1 ? "1" : (ibm_pc->config.sw1 & SW1_DISKS_MASK) == SW1_DISKS_2 ? "2" : (ibm_pc->config.sw1 & SW1_DISKS_MASK) == SW1_DISKS_3 ? "3" : "4");
+		}
+		else {
+			ui_text("Has FDC:         No");
+		}
 	}
 	else {
-		ui_text("Has FDC:    No");
+		ui_text("Num Disks:       %s", (ibm_pc->config.sw1& SW1_DISKS_MASK) == SW1_DISKS_1 ? "1" : (ibm_pc->config.sw1 & SW1_DISKS_MASK) == SW1_DISKS_2 ? "2" : (ibm_pc->config.sw1 & SW1_DISKS_MASK) == SW1_DISKS_3 ? "3" : "4");
 	}
 	ui_separator();
 	
 	uint20_t io_ram = determine_io_ram_size(ibm_pc->config.sw1, ibm_pc->config.sw2) / 1024;
 	uint20_t planar_ram = determine_planar_ram_size(ibm_pc->config.sw1) / 1024;
 
-	ui_text("Planar RAM: %u KB", planar_ram);
-	ui_text("IO RAM:     %u KB", io_ram);
-	ui_text("Total RAM:  %u KB", planar_ram + io_ram);
+	ui_text("Planar RAM:      %u KB", planar_ram);
+	ui_text("IO RAM:          %u KB", io_ram);
+	ui_text("Total RAM:       %u KB", planar_ram + io_ram);
 }
 
 static void set_breakpoint_from_int(uint32_t address, UI_CONTEXT* ui_context) {
