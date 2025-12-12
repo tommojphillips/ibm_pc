@@ -100,6 +100,7 @@ static const TOMI_SETTING setting_map[] = {
 	TOMI_SETTING_ENUM_U8("video_adapter", video_adapter_def),
 	TOMI_SETTING_U32("conventional_ram"),
 	TOMI_SETTING_U8("num_floppies"),
+	TOMI_SETTING_U8("continuous_post"),
 	TOMI_SETTING_U8("sw1_override"),
 	TOMI_SETTING_U8("sw2_override"),
 	TOMI_SETTING_U8("sw1"),
@@ -165,6 +166,7 @@ void args_set_default(ARGS* args) {
 
 	args->pc_config->video_adapter = VIDEO_ADAPTER_MDA_80X25;
 	args->pc_config->fdc_disks = 2;
+	args->pc_config->continuously_post = 0;
 	args->pc_config->total_memory = 16 * 1024;
 	args->pc_config->sw1_provided = 0;
 	args->pc_config->sw1 = 0;
@@ -470,6 +472,7 @@ int args_parse_ini(TOMI_VAR* var_map, ARGS* args) {
 	set_var(&args->pc_config->video_adapter);
 	set_var(&args->pc_config->total_memory);
 	set_var(&args->pc_config->fdc_disks);
+	set_var(&args->pc_config->continuously_post);
 	set_var(&args->pc_config->sw1_provided);
 	set_var(&args->pc_config->sw2_provided);
 	set_var(&args->pc_config->sw1);
