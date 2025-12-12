@@ -597,11 +597,6 @@ static void draw_dipswitch_submenu(void) {
 	ui_text("Total RAM:  %u KB", planar_ram + io_ram);
 }
 
-static uint32_t cal_step_over_target(void) {
-	i8086_mnem(&ibm_pc->mnem);
-	return i8086_mnem_get_step_over_target(&ibm_pc->mnem);
-}
-
 static void set_breakpoint_from_int(uint32_t address, UI_CONTEXT* ui_context) {
 	if (address == 0) {
 		ui_context->buffer[0] = '\0';
@@ -628,6 +623,24 @@ static void set_breakpoint_from_str(UI_CONTEXT* ui_context) {
 	}
 }
 
+static void to_upper(char* buffer) {
+	size_t len = strlen(buffer);
+	for (int i = 0; i < len; ++i) {
+		if (buffer[i] >= 'a' && buffer[i] <= 'z') {
+			buffer[i] -= 0x20;
+		}
+	}
+}
+static void show_gpr_tooltip(int index) {
+	ui_set_item_tooltip("L = %02X   %d\nH = %02X   %d\nX = %04X %d",
+		ibm_pc->cpu.registers[index].l, ibm_pc->cpu.registers[index].l,
+		ibm_pc->cpu.registers[index].h, ibm_pc->cpu.registers[index].h,
+		ibm_pc->cpu.registers[index].r16, ibm_pc->cpu.registers[index].r16);
+}
+static void show_r16_tooltip(int index) {
+	ui_set_item_tooltip("%04X %d", ibm_pc->cpu.registers[index].r16, ibm_pc->cpu.registers[index].r16);
+}
+
 static void draw_cpu_control(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 
 	if (ibm_pc->step) {
@@ -648,9 +661,18 @@ static void draw_cpu_control(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) 
 			ibm_pc->step = 2;
 		}
 		ui_same_line();
+		i8086_mnem(&ibm_pc->mnem);
 		if (ui_button("Step over")) {
-			ibm_pc->step = 0;
-			ibm_pc->step_over_target = cal_step_over_target();
+			if (ibm_pc->mnem.step_over_has_target) {
+				ibm_pc->step = 0;
+				ibm_pc->step_over_target = i8086_mnem_get_step_over_target(&ibm_pc->mnem);
+			}
+			else {
+				ibm_pc->step = 2;
+			}
+		}
+		if (ibm_pc->mnem.step_over_has_target) {
+			ui_set_item_tooltip("Target: %05X", i8086_mnem_get_step_over_target(&ibm_pc->mnem));
 		}
 	}
 	else {
@@ -664,13 +686,95 @@ static void draw_cpu_control(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) 
 	}
 }
 static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
+	VECTOR4 vec4 = { 0.2f, 1.0f, 0.35f, 1.0f };
 
-	ui_text("AX %04X BX %04X", ibm_pc->cpu.registers[REG_AX].r16, ibm_pc->cpu.registers[REG_BX].r16);
-	ui_text("CX %04X DX %04X", ibm_pc->cpu.registers[REG_CX].r16, ibm_pc->cpu.registers[REG_DX].r16);
-	ui_text("SI %04X DI %04X", ibm_pc->cpu.registers[REG_SI].r16, ibm_pc->cpu.registers[REG_DI].r16);
-	ui_text("SP %04X BP %04X", ibm_pc->cpu.registers[REG_SP].r16, ibm_pc->cpu.registers[REG_BP].r16);
-	ui_text("ES %04X CS %04X", ibm_pc->cpu.segments[SEG_ES], ibm_pc->cpu.segments[SEG_CS]);
-	ui_text("DS %04X SS %04X", ibm_pc->cpu.segments[SEG_DS], ibm_pc->cpu.segments[SEG_SS]);
+	ui_text_colored_vec(&vec4, "AX");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.registers[REG_AX].r16);
+	show_gpr_tooltip(REG_AX);
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "BX");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.registers[REG_BX].r16);
+	show_gpr_tooltip(REG_BX);
+
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "PSW   ");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.status.word);
+
+	ui_text_colored_vec(&vec4, "CX");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.registers[REG_CX].r16);
+	show_gpr_tooltip(REG_CX);
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "DX");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.registers[REG_DX].r16);
+	show_gpr_tooltip(REG_DX);
+
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "IP    ");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.ip);
+
+	ui_text_colored_vec(&vec4, "SI");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.registers[REG_SI].r16);
+	show_r16_tooltip(REG_SI);
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "DI");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.registers[REG_DI].r16);
+	show_r16_tooltip(REG_DI);
+
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "SS:BP");
+	ui_same_line();
+	ui_text("%05X", i8086_get_physical_address(ibm_pc->cpu.segments[SEG_SS], ibm_pc->cpu.registers[REG_BP].r16));
+
+	ui_text_colored_vec(&vec4, "SP");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.registers[REG_SP].r16);
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "BP");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.registers[REG_BP].r16);
+
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "SS:SP");
+	ui_same_line();
+	ui_text("%05X", i8086_get_physical_address(ibm_pc->cpu.segments[SEG_SS], ibm_pc->cpu.registers[REG_SP].r16));
+
+	ui_text_colored_vec(&vec4, "ES");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.segments[SEG_ES]);
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "CS");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.segments[SEG_CS]);
+
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "CS:IP");
+	ui_same_line();
+	ui_text("%05X", i8086_get_physical_address(ibm_pc->cpu.segments[SEG_CS], ibm_pc->cpu.ip));
+
+	ui_text_colored_vec(&vec4, "DS");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.segments[SEG_DS]);
+	ui_same_line();
+	ui_text_colored_vec(&vec4, "SS");
+	ui_same_line();
+	ui_text("%04X", ibm_pc->cpu.segments[SEG_SS]);
+
+	i8086_mnem(&ibm_pc->mnem);
+	if (ibm_pc->mnem.has_ea) {
+		to_upper(ibm_pc->mnem.ea_str);
+		ui_same_line();
+		ui_text_colored_vec(&vec4, ibm_pc->mnem.ea_str);
+		ui_same_line();
+		ui_text("%05X", i8086_get_physical_address(ibm_pc->mnem.ea_segment, ibm_pc->mnem.ea_offset));
+	}
 
 	ui_separator();
 
@@ -680,6 +784,7 @@ static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	else {
 		ui_text("  ");
 	}
+	ui_set_item_tooltip("Carry flag");
 
 	ui_same_line();
 	if (ibm_pc->cpu.status.pf) {
@@ -688,6 +793,7 @@ static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	else {
 		ui_text("  ");
 	}
+	ui_set_item_tooltip("Parity flag");
 
 	ui_same_line();
 	if (ibm_pc->cpu.status.af) {
@@ -696,6 +802,7 @@ static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	else {
 		ui_text("  ");
 	}
+	ui_set_item_tooltip("Aux Carry flag");
 
 	ui_same_line();
 	if (ibm_pc->cpu.status.zf) {
@@ -704,6 +811,7 @@ static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	else {
 		ui_text("  ");
 	}
+	ui_set_item_tooltip("Zero flag");
 
 	ui_same_line();
 	if (ibm_pc->cpu.status.sf) {
@@ -712,6 +820,7 @@ static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	else {
 		ui_text("  ");
 	}
+	ui_set_item_tooltip("Sign flag");
 
 	ui_same_line();
 	if (ibm_pc->cpu.status.of) {
@@ -720,6 +829,7 @@ static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	else {
 		ui_text("  ");
 	}
+	ui_set_item_tooltip("Overflow flag");
 
 	ui_same_line();
 	if (ibm_pc->cpu.status.df) {
@@ -728,6 +838,7 @@ static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	else {
 		ui_text("  ");
 	}
+	ui_set_item_tooltip("Direction flag");
 
 	ui_same_line();
 	if (ibm_pc->cpu.status.in) {
@@ -736,6 +847,7 @@ static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	else {
 		ui_text("  ");
 	}
+	ui_set_item_tooltip("Interrupt flag");
 
 	ui_same_line();
 	if (ibm_pc->cpu.status.tf) {
@@ -743,14 +855,25 @@ static void draw_cpu_state(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	}
 	else {
 		ui_text("  ");
-	}	
+	}
+	ui_set_item_tooltip("Trap flag");
 }
 static void draw_cpu_disassembly(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 	uint16_t ip = ibm_pc->cpu.ip;
 	uint16_t cs = ibm_pc->cpu.segments[SEG_CS];
 	uint32_t phys_address = 0;
+	uint32_t next_step_over = 0;
+	uint8_t has_step_over = 0;
+	uint32_t next_step_into = 0;
+	uint8_t has_step_into = 0;
 	for (int i = 0; i < 100; ++i) {
 		i8086_mnem_at(&ibm_pc->mnem, cs, ip);
+		if (i == 0) {
+			has_step_over = ibm_pc->mnem.step_over_has_target;
+			next_step_over = i8086_mnem_get_step_over_target(&ibm_pc->mnem);
+			has_step_into = ibm_pc->mnem.step_into_has_target;
+			next_step_into = i8086_mnem_get_step_into_target(&ibm_pc->mnem);
+		}
 		phys_address = i8086_get_physical_address(cs, ip);
 		ui_push_id(i);
 		ui_push_style_color(UI_COLOR_ButtonActive, 1, 0, 0, 1);
@@ -762,12 +885,68 @@ static void draw_cpu_disassembly(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* displ
 				set_breakpoint_from_int(phys_address, ui_context);
 			}
 		}
+		ui_set_item_tooltip("Set Breakpoint");
 		ui_pop_style_color(1);
 		ui_pop_id();
+		
 		ui_same_line();
-		ui_text("%04X:%04X: %s", ibm_pc->mnem.segment, ip, ibm_pc->mnem.str);
-
+		ui_text_colored(0.2f, 1.0f, 0.35f, 1.0f, "%04X:%04X", ibm_pc->mnem.segment, ip);
+		ui_set_item_tooltip("%05X", phys_address);
+		ui_same_line_spacing(10);
+		VECTOR4 vec4 = { 1, 1, 1, 1 };
+		if (has_step_over && next_step_over == phys_address) {
+			vec4.x = 0.65f;
+			vec4.y = 0.0f;
+			vec4.z = 0.65f;
+			vec4.w = 1.0f;
+		}
+		if (has_step_into && next_step_into == phys_address) {
+			vec4.x = 0.65f;
+			vec4.y = 0.0f;
+			vec4.z = 0.65f;
+			vec4.w = 1.0f;
+		}
+		ui_text_colored_vec(&vec4, "%s", ibm_pc->mnem.str);
+		if (ibm_pc->mnem.has_ea || ibm_pc->mnem.step_over_has_target || ibm_pc->mnem.step_into_has_target) {
+			if (ui_begin_item_tooltip()) {
+				if (ibm_pc->mnem.has_ea) {
+					to_upper(ibm_pc->mnem.ea_str);
+					uint20_t addr = i8086_get_physical_address(ibm_pc->mnem.ea_segment, ibm_pc->mnem.ea_offset);
+					ui_text("%s %04X:%04X (%05X) = %02X", ibm_pc->mnem.ea_str, ibm_pc->mnem.ea_segment, ibm_pc->mnem.ea_offset, addr, ibm_pc->cpu.funcs.read_mem_byte(addr));
+				}
+				if (ibm_pc->mnem.step_into_has_target) {
+					uint20_t addr = i8086_get_physical_address(ibm_pc->mnem.step_into_segment, ibm_pc->mnem.step_into_offset);
+					ui_text("Into: %04X:%04X (%05X)", ibm_pc->mnem.step_into_segment, ibm_pc->mnem.step_into_offset, addr);
+				}
+				if (ibm_pc->mnem.step_over_has_target) {
+					uint20_t addr = i8086_get_physical_address(ibm_pc->mnem.step_over_segment, ibm_pc->mnem.step_over_offset);
+					ui_text("Over: %04X:%04X (%05X)", ibm_pc->mnem.step_over_segment, ibm_pc->mnem.step_over_offset, addr);
+				}
+				ui_end_item_tooltip();
+			}
+		}
 		ip += ibm_pc->mnem.counter;
+	}
+}
+static void draw_cpu_ivt(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
+	for (int i = 0; i < 255; ++i) {
+		uint16_t offset = ibm_pc->cpu.funcs.read_mem_byte((4 * i) + 0) | (ibm_pc->cpu.funcs.read_mem_byte((4 * i) + 1) << 8);
+		uint16_t segment = ibm_pc->cpu.funcs.read_mem_byte((4 * i) + 2) | (ibm_pc->cpu.funcs.read_mem_byte((4 * i) + 3) << 8);
+		uint20_t phys_address = i8086_get_physical_address(segment, offset);
+		ui_push_id(i);
+		if (ui_draw_circle("###breakpoint", 5, 64, phys_address == ibm_pc->breakpoint)) {
+			if (phys_address == ibm_pc->breakpoint) {
+				set_breakpoint_from_int(0, ui_context);
+			}
+			else {
+				set_breakpoint_from_int(phys_address, ui_context);
+			}
+		}
+		ui_set_item_tooltip("Set Breakpoint");
+		ui_pop_id();
+
+		ui_same_line();
+		ui_text_colored(0.2f, 1.0f, 0.35f, 1.0f, "IVT %02X [%04X:%04X]", i, segment, offset);
 	}
 }
 
@@ -922,6 +1101,10 @@ static void draw_main_menu(UI_CONTEXT* ui_context, DISPLAY_INSTANCE* display) {
 
 		ui_begin("CPU Disassembly", &ui_context->dbg, 0);
 		draw_cpu_disassembly(ui_context, display);
+		ui_end();
+
+		ui_begin("CPU IVT", &ui_context->dbg, 0);
+		draw_cpu_ivt(ui_context, display);
 		ui_end();
 	}
 }
