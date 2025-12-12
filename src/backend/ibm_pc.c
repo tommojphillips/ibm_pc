@@ -216,12 +216,24 @@ static void ibm_pc_set_sw1(uint20_t planar_ram) {
 		ibm_pc->config.sw1 |= determine_planar_ram_sw(planar_ram);
 		ibm_pc->config.sw1 |= ibm_pc->config.video_adapter & SW1_DISPLAY_MASK;
 
-		if (ibm_pc->config.fdc_disks > 0) {
-			ibm_pc->config.sw1 |= SW1_HAS_FDC;
-
-			if (ibm_pc->config.fdc_disks <= 4) {
-				ibm_pc->config.sw1 |= ((ibm_pc->config.fdc_disks - 1) & 0x03) << 6; /* SW1_DISKS_X */
-			}
+		switch (ibm_pc->config.model) {
+			case MODEL_5150_16_64:
+			case MODEL_5150_64_256:
+				if (ibm_pc->config.fdc_disks > 0) {
+					ibm_pc->config.sw1 |= SW1_HAS_FDC;
+					if (ibm_pc->config.fdc_disks <= 4) {
+						ibm_pc->config.sw1 |= ((ibm_pc->config.fdc_disks - 1) & 0x03) << 6; /* SW1_DISKS_X */
+					}
+				}
+				break;
+			case MODEL_5160:
+				if (!ibm_pc->config.continuously_post) {
+					ibm_pc->config.sw1 |= SW1_CONTINUOUSLY_POST;
+				}
+				if (ibm_pc->config.fdc_disks > 0 && ibm_pc->config.fdc_disks <= 4) {
+					ibm_pc->config.sw1 |= ((ibm_pc->config.fdc_disks - 1) & 0x03) << 6; /* SW1_DISKS_X */
+				}
+				break;
 		}
 	}
 }
@@ -234,21 +246,36 @@ static void ibm_pc_set_sw2(uint20_t planar_ram, uint20_t io_ram) {
 
 void ibm_pc_set_config(void) {
 	/* Set PC Config based on sw1,sw2  */
-	if (ibm_pc->config.model == MODEL_5150_16_64) {
-		dbg_print("Model: 5150 16-64KB\n");
-	}
-	else if (ibm_pc->config.model == MODEL_5150_64_256) {
-		dbg_print("Model: 5150 64-256KB\n");
-	}
-	else if (ibm_pc->config.model == MODEL_5160) {
-		dbg_print("Model: 5160\n");
-	}
 	
-	if (ibm_pc->config.sw1 & SW1_HAS_FDC) {
-		ibm_pc->config.fdc_disks = ((ibm_pc->config.sw1 & SW1_DISKS_MASK) >> 6) + 1;
-	}
-	else {
-		ibm_pc->config.fdc_disks = 0;
+	switch (ibm_pc->config.model) {
+		case MODEL_5150_16_64:
+			dbg_print("Model: 5150 16-64KB\n");
+			if (ibm_pc->config.sw1 & SW1_HAS_FDC) {
+				ibm_pc->config.fdc_disks = ((ibm_pc->config.sw1 & SW1_DISKS_MASK) >> 6) + 1;
+			}
+			else {
+				ibm_pc->config.fdc_disks = 0;
+			}
+			break;
+		case MODEL_5150_64_256:
+			dbg_print("Model: 5150 64-256KB\n");
+			if (ibm_pc->config.sw1 & SW1_HAS_FDC) {
+				ibm_pc->config.fdc_disks = ((ibm_pc->config.sw1 & SW1_DISKS_MASK) >> 6) + 1;
+			}
+			else {
+				ibm_pc->config.fdc_disks = 0;
+			}
+			break;
+		case MODEL_5160:
+			dbg_print("Model: 5160\n");
+			if (ibm_pc->config.sw1 & SW1_CONTINUOUSLY_POST) {
+				ibm_pc->config.continuously_post = 0;
+			}
+			else {
+				ibm_pc->config.continuously_post = 1;
+			}
+			ibm_pc->config.fdc_disks = ((ibm_pc->config.sw1 & SW1_DISKS_MASK) >> 6) + 1;
+			break;
 	}
 
 	uint20_t planar_mem = determine_planar_ram_size(ibm_pc->config.sw1);

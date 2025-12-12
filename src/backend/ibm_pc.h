@@ -74,6 +74,7 @@
 #define SW1_MEMORY_48K  0x08 // SW1 b2,b3 - Amount of memory 48K
 #define SW1_MEMORY_64K  0x0C // SW1 b2,b3 - Amount of memory 64K
 
+#define SW1_CONTINUOUSLY_POST 0x01 // SW1 b1 (5160)
 #define SW1_HAS_FDC     0x01 // SW1 b1
 #define SW1_HAS_FPU     0x02 // SW1 b2
 
@@ -121,6 +122,7 @@ typedef struct {
 typedef struct IBM_PC_CONFIG {
 	uint8_t video_adapter;
 	uint8_t fdc_disks;
+	uint8_t continuously_post; /* 5160 only */
 	uint8_t sw1_provided;
 	uint8_t sw1;
 	uint8_t sw2_provided;
