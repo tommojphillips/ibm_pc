@@ -75,6 +75,24 @@ void ui_text(const char* fmt, ...) {
 	TextV(fmt, args);
 	va_end(args);
 }
+void ui_text_disabled(const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	TextDisabledV(fmt, args);
+	va_end(args);
+}
+void ui_text_colored(float r, float g, float b, float a, const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	TextColoredV(ImVec4(r, g, b, a), fmt, args);
+	va_end(args);
+}
+void ui_text_colored_vec(VECTOR4* vector, const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	TextColoredV(ImVec4(vector->x, vector->y, vector->z, vector->w), fmt, args);
+	va_end(args);
+}
 
 int ui_button(const char* label) {
 	if (Button(label)) {
@@ -326,6 +344,9 @@ void ui_set_next_window_size(float x, float y) {
 void ui_push_style_color(UI_COLOR type, float r, float g, float b, float a) {
 	PushStyleColor(type, ImVec4(r, g, b, a));
 }
+void ui_push_style_color_vec(UI_COLOR type, VECTOR4* vector) {
+	PushStyleColor(type, ImVec4(vector->x, vector->y, vector->z, vector->w));
+}
 
 void ui_pop_style_color(int count) {
 	PopStyleColor(count);
@@ -492,7 +513,6 @@ int ui_dipswitch_u32(const char* label, uint32_t* state, uint32_t enable_mask) {
 	return r;
 }
 
-
 int ui_text_input(const char* label, char* buffer, size_t buffer_len) {
 	if (InputText(label, buffer, buffer_len, 0, NULL, NULL)) {
 		return 1;
@@ -544,4 +564,33 @@ int ui_draw_circle(const char* id, float radius, int segments, int selected) {
 
 void ui_separator(void) {
 	Separator();
+}
+
+void ui_set_tooltip(const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	SetTooltipV(fmt, args);
+	va_end(args);
+}
+void ui_set_item_tooltip(const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	SetItemTooltipV(fmt, args);
+	va_end(args);
+}
+void ui_begin_tooltip(void) {
+	BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None);
+}
+void ui_end_tooltip(void) {
+	EndTooltip();
+}
+int ui_begin_item_tooltip(void) {
+	if (IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
+		BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None);
+		return 1;
+	}
+	return 0;
+}
+void ui_end_item_tooltip(void) {
+	EndTooltip();
 }

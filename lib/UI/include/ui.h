@@ -154,6 +154,13 @@ typedef struct VECTOR2 {
     float y;
 } VECTOR2;
 
+typedef struct VECTOR4 {
+    float x;
+    float y;
+    float z;
+    float w;
+} VECTOR4;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -165,6 +172,9 @@ UI_EXPORT void ui_render(void);
 UI_EXPORT void ui_process_event(void* param, SDL_Event* e);
 
 UI_EXPORT void ui_text(const char* fmt, ...);
+UI_EXPORT void ui_text_disabled(const char* fmt, ...);
+UI_EXPORT void ui_text_colored(float r, float g, float b, float a, const char* fmt, ...);
+UI_EXPORT void ui_text_colored_vec(VECTOR4* vector, const char* fmt, ...);
 
 UI_EXPORT int ui_button(const char* label);
 UI_EXPORT int ui_checkbox(UI_CHECKBOX alignment, const char* label, int* state);
@@ -198,6 +208,7 @@ UI_EXPORT void ui_set_next_window_size(float x, float y);
 UI_EXPORT VECTOR2 ui_get_window_size(void);
 
 UI_EXPORT void ui_push_style_color(UI_COLOR type, float r, float g, float b, float a);
+UI_EXPORT void ui_push_style_color_vec(UI_COLOR type, VECTOR4* vector);
 UI_EXPORT void ui_pop_style_color(int count);
 
 UI_EXPORT void ui_push_style_var_vec(UI_STYLE_VAR type, float x, float y);
@@ -231,6 +242,14 @@ UI_EXPORT void ui_push_id(int id);
 UI_EXPORT void ui_pop_id(void);
 
 UI_EXPORT int ui_draw_circle(const char* id, float radius, int segments, int selected);
+
+UI_EXPORT void ui_set_tooltip(const char* fmt, ...);
+UI_EXPORT void ui_set_item_tooltip(const char* fmt, ...);
+
+UI_EXPORT void ui_begin_tooltip(void);
+UI_EXPORT void ui_end_tooltip(void);
+UI_EXPORT int ui_begin_item_tooltip(void);
+UI_EXPORT void ui_end_item_tooltip(void);
 
 #ifdef __cplusplus
 };
