@@ -91,7 +91,7 @@ The project is built in Visual Studio 2022 or 2026
  ROMS are required for full functionality.
  ROMS can be found on 86Box's github: https://github.com/86Box/roms/
 
-### IBM PC 5150 ROM
+### IBM PC 5150 (PC) ROMS
 
  - The earlier 1981 BIOSes only read the first 4 bits of SW2 resulting in a max of 544KB of RAM 
  - The later 1982 BIOSes read the first 5 bits of SW2 resulting in a offical max of 640KB of RAM
@@ -103,9 +103,33 @@ The project is built in Visual Studio 2022 or 2026
 | IBM 5150 U33 | 16 AUG 1982 | 8K   | **0xFE000** | `machines\ibmpc82\BIOS_5150_16AUG82_5000024_U33.BIN`  |
 | IBM 5150 U33 | 27 Oct 1982 | 8K   | **0xFE000** | `machines\ibmpc82\BIOS_5150_27OCT82_1501476_U33.BIN`  |
 
+### IBM PC 5160 (XT) ROMS
+
+| Description  | Date        | Size | Address     | Location                                              |
+|--------------|-------------|------|-------------|-------------------------------------------------------|
+| IBM 5160 U18 | 16 AUG 1982 | 32K  | **0xF8000** | `machines\ibmxt\BIOS_5160_16AUG82_U18_5000026.BIN`    |
+| IBM 5160 U19 | 16 AUG 1982 | 8K   | **0xF6000** | `machines\ibmxt\BIOS_5160_16AUG82_U19_5000027.BIN`    |
+
+| Description  | Date        | Size | Address     | Location                                              |
+|--------------|-------------|------|-------------|-------------------------------------------------------|
+| IBM 5160 U18 | 08 NOV 1982 | 32K  | **0xF8000** | `machines\ibmxt\BIOS_5160_08NOV82_U18_1501512.BIN`    |
+| IBM 5160 U19 | 08 NOV 1982 | 8K   | **0xF6000** | `machines\ibmxt\BIOS_5160_08NOV82_U19_5000027.BIN`    |
+
+| Description  | Date        | Size | Address     | Location                                                                |
+|--------------|-------------|------|-------------|-------------------------------------------------------------------------|
+| IBM 5160 U18 | 10 JAN 1986 | 32K  | **0xF8000** | `machines\ibmxt86\BIOS_5160_10JAN86_U18_62X0851_27256_F800.BIN`         |
+| IBM 5160 U19 | 10 JAN 1986 | 32K  | **0xF0000** | `machines\ibmxt86\BIOS_5160_10JAN86_U19_62X0854_27256_F000.BIN`         |
+
+| Description  | Date        | Size | Address     | Location                                                                |
+|--------------|-------------|------|-------------|-------------------------------------------------------------------------|
+| IBM 5160 U18 | 09 MAY 1986 | 32K  | **0xF8000** | `machines\ibmxt86\BIOS_5160_09MAY86_U18_59X7268_62X0890_27256_F800.BIN` |
+| IBM 5160 U19 | 09 MAY 1986 | 32K  | **0xF0000** | `machines\ibmxt86\BIOS_5160_09MAY86_U19_62X0819_68X4370_27256_F000.BIN` |
+
 ### BASIC ROMS
 
 #### Basic version C1.0 ROM 
+
+ Basic is optional and only for the 5150 (PC). Basic comes included in the 5160 (XT) BIOSes.
 
  | Description    | Size  | Address     | Location                                                                     |
  |----------------|------ |-------------|----------------------------------------------------------------------------- |
@@ -113,7 +137,7 @@ The project is built in Visual Studio 2022 or 2026
  | BASIC C1.0 U30 | 8K    | **0xF8000** | `machines\ibmpc\IBM 5150 - Cassette BASIC version C1.00 - U30 - 5700027.bin` |
  | BASIC C1.0 U31 | 8K    | **0xFA000** | `machines\ibmpc\IBM 5150 - Cassette BASIC version C1.00 - U31 - 5700035.bin` |
  | BASIC C1.0 U32 | 8K    | **0xFC000** | `machines\ibmpc\IBM 5150 - Cassette BASIC version C1.00 - U32 - 5700043.bin` |
- | BASIC C1.0     | 32K   | **0xF6000** | `machines\ibmpc\ibm-basic-1.00.rom`                                          |
+ | BASIC C1.0 U29,U30,U31,U32 | 32K   | **0xF6000** | `machines\ibmpc\ibm-basic-1.00.rom`                              |
 
 #### Basic version C1.1 ROM
 
@@ -123,9 +147,11 @@ The project is built in Visual Studio 2022 or 2026
  | BASIC C1.1 U30 | 8K    | **0xF8000** | `machines\ibmpc82\IBM 5150 - Cassette BASIC version C1.10 - U30 - 5000021.bin` |
  | BASIC C1.1 U31 | 8K    | **0xFA000** | `machines\ibmpc82\IBM 5150 - Cassette BASIC version C1.10 - U31 - 5000022.bin` |
  | BASIC C1.1 U32 | 8K    | **0xFC000** | `machines\ibmpc82\IBM 5150 - Cassette BASIC version C1.10 - U32 - 5000023.bin` |
- | BASIC C1.1     | 32K   | **0xF6000** | `machines\ibmpc82\ibm-basic-1.10.rom`                                          |
+ | BASIC C1.1 U29,U30,U31,U32 | 32K   | **0xF6000** | `machines\ibmpc82\ibm-basic-1.10.rom`                              |
 
 ### XEBEC ROM
+
+  The Xebec ROM is required to use the Hard disks. 
 
  | Description    | Size  | Address     | Location                                                                       |
  |----------------|-------|-------------|------------------------------------------------------------------------------- |
@@ -153,7 +179,7 @@ The project is built in Visual Studio 2022 or 2026
 | `-ram <ram>`                 | `-r <ram>`             | Amount of conventional RAM.                             | 16KB - 736KB                   |
 | `-sw1 <sw1>`                 | N/A                    | Value of motherboard DIP switch SW1                     | `0` - `255`                    |
 | `-sw2 <sw2>`                 | N/A                    | Value of motherboard DIP switch SW2                     | `0` - `255`                    |
-| `-model <model>`             | N/A                    | Motherboard model                                       | `5150_16_64`, `5150_64_256`    |
+| `-model <model>`             | N/A                    | Motherboard model                                       | `5150_16_64`, `5150_64_256`, `5160` |
 | `-dbg`                       | N/A                    | Enables the debug UI                                    | N/A                            |
 
 ### Notes
@@ -229,7 +255,7 @@ Structs can also be written in a single line:
 ### Settings:
 | Key                     | Type   | Description                                        | Values                         |
 |-------------------------|--------|----------------------------------------------------|--------------------------------|
-| `model`                 | ENUM   | Motherboard model                                  | `5150_16_64`, `5150_64_256`    |
+| `model`                 | ENUM   | Motherboard model                                  | `5150_16_64`, `5150_64_256`, `5160` |
 | `video_adapter`         | ENUM   | Selects which display adapter to emulate           | `MDA`, `CGA`, `CGA40`, `CGA80` |
 | `conventional_ram`      | INT    | Amount of conventional RAM installed               | `16K` - `736K`                 |
 | `num_floppies`          | INT    | Number of floppy drives present                    | `0` - `4`                      |
@@ -262,7 +288,7 @@ Structs can also be written in a single line:
 | Key             | Type   | Description                         | Values             |
 |-----------------|--------|-------------------------------------|--------------------|
 | `path`          | STRING | Path to the Disk file               | file path          |
-| `drive`         | INT    | The drive to load the disk file in. | `A`, `B`, `C`, `D` |
+| `drive`         | INT    | The drive to load the disk file in. | `A`, `B`           |
 | `write_protect` | BOOL   | write protects the drive            | `true`, `false`    |
 
 ### HDD settings:
@@ -299,10 +325,10 @@ Structs can also be written in a single line:
 
 ```ini
 ; ----------------- PC Config ------------------
-model = '5150_64_256'         ; 5150_16_64, 5150_64_256
+model = '5150_64_256'         ; 5150_16_64, 5150_64_256, 5160
 video_adapter = 'CGA'         ; MDA, CGA, CGA40, CGA80
 conventional_ram = 0x40000    ; 0x4000 - 0xB8000 (16K - 736K)
-num_floppies = 2              ; 0, 1, 2, 4
+num_floppies = 2              ; 0, 1, 2
 ; ----------------------------------------------
 
 ; --------------- DIP SWITCHES -----------------

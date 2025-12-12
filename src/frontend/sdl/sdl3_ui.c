@@ -367,6 +367,20 @@ static void draw_dipswitch_submenu(void) {
 			ram_inc_below_planar_max = 64;
 			ram_inc_above_planar_max = 32;
 			if (ui_menu_button("Model: IBM 5150 64KB-256KB", 0, 1)) {
+				ibm_pc->config.model = MODEL_5160;
+				ibm_pc_set_config();
+			}
+			break;
+
+		case MODEL_5160:
+			sw1_mask = 0xFF;
+			sw2_mask = 0x1F;
+			planar_ram_max = 256;
+			total_ram_max = 736;
+			total_ram_min = 64;
+			ram_inc_below_planar_max = 64;
+			ram_inc_above_planar_max = 32;
+			if (ui_menu_button("Model: IBM 5160", 0, 1)) {
 				ibm_pc->config.model = MODEL_5150_16_64;
 				ibm_pc_set_config();
 			}

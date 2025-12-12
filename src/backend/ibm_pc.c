@@ -59,6 +59,7 @@
 #define PORTB_READ_SW2_KEY       0x04 // b2 - Enable read SW2 or scan key; enable SW2 read = 1, enable scan key read = 0
 #define PORTB_CASSETTE_MOTOR_OFF 0x08 // b3 - Turn on LED; on = 1, off = 0 
 #define PORTB_LED_ON             0x08 // b3 - Turn on LED; on = 1, off = 0 
+#define PORTB_SW1_SELECT         0x08 // b3 - MS 4 bits = 1, LS 4 bits = 0 
 #define PORTB_KB_ENABLE          0x40 // b6 - hold keyboard low
 #define PORTB_READ_SW1_KB        0x80 // b7 - Enable read SW1 or scan code; enable SW1 read = 1, enable scan code read = 0
 
@@ -100,6 +101,7 @@ uint8_t determine_planar_ram_sw(uint20_t planar_ram) {
 			sw = (planar_ram >> 12) & 0xFF;
 			break;
 		case MODEL_5150_64_256:
+		case MODEL_5160:
 			sw = (planar_ram >> 14) & 0xFF;
 			break;
 	}
@@ -124,6 +126,7 @@ uint20_t determine_planar_ram_size(uint8_t sw1) {
 			planar_ram <<= 12;
 			break;
 		case MODEL_5150_64_256:
+		case MODEL_5160:
 			planar_ram <<= 14;
 			break;
 	}
@@ -138,6 +141,7 @@ uint8_t determine_io_ram_sw(uint20_t planar_ram, uint20_t io_ram) {
 			sw = (io_ram / 1024 / 32) & 0x1F;
 			break;
 		case MODEL_5150_64_256:
+		case MODEL_5160:
 			if (planar_ram >= 64 * 1024) {
 				planar_ram -= 64 * 1024;
 			}
@@ -155,6 +159,7 @@ uint20_t determine_io_ram_size(uint8_t sw1, uint8_t sw2) {
 			io_ram = (sw2 & 0x1F) * 1024 * 32;
 			break;
 		case MODEL_5150_64_256:
+		case MODEL_5160:
 			planar_ram = determine_planar_ram_size(sw1);
 			if (planar_ram > 64 * 1024) {
 				planar_ram -= 64 * 1024;
@@ -182,6 +187,7 @@ static void cal_planar_io_ram(uint20_t conventional_ram, uint20_t* planar_ram, u
 			max_planar_ram = 64 * 1024;
 			break;
 		case MODEL_5150_64_256:
+		case MODEL_5160:
 			min_planar_ram = 64 * 1024;
 			max_planar_ram = 256 * 1024;
 			break;
@@ -234,7 +240,10 @@ void ibm_pc_set_config(void) {
 	else if (ibm_pc->config.model == MODEL_5150_64_256) {
 		dbg_print("Model: 5150 64-256KB\n");
 	}
-
+	else if (ibm_pc->config.model == MODEL_5160) {
+		dbg_print("Model: 5160\n");
+	}
+	
 	if (ibm_pc->config.sw1 & SW1_HAS_FDC) {
 		ibm_pc->config.fdc_disks = ((ibm_pc->config.sw1 & SW1_DISKS_MASK) >> 6) + 1;
 	}
@@ -381,46 +390,27 @@ static void write_io_byte(uint16_t port, uint8_t value) {
 
 /* PPI Callbacks */
 static uint8_t ppi_port_a_read(I8255_PPI* ppi) {
-	/* Port A (read keyboard input, system sw1) */
-	
-	if (ppi->port_b & PORTB_READ_SW1_KB) {
-		return ibm_pc->config.sw1;
+	/* Port A (read keyboard input, system sw1) */	
+	switch (ibm_pc->config.model) {
+		case MODEL_5150_16_64:
+		case MODEL_5150_64_256:
+			if (ppi->port_b & PORTB_READ_SW1_KB) {
+				return ibm_pc->config.sw1;
+			}
+			else {
+				return kbd_get_data(&ibm_pc->kbd);
+			}
+			break;
+		case MODEL_5160:
+			return kbd_get_data(&ibm_pc->kbd);
 	}
-	else {
-		return kbd_get_data(&ibm_pc->kbd);
-	}
+	return 0; /* not handled */	
 }
 static uint8_t ppi_port_b_read(I8255_PPI* ppi) {
-	//dbg_print("[PPI] portb read\n");
 	return ppi->port_b;
 }
 static void ppi_port_b_write(I8255_PPI* ppi, uint8_t value) {
-	/* Port B (device control register)
-
-		PORTB-b7 0 enable keyboard read
-				 1 clear keyboard and enable sense of SW1
-		
-		PORTB-b6 0 hold keyboard clock low, no shift reg. shifts
-				 1 enable keyboard clock signal
-		
-		PORTB-b5 0 enable i/o check
-				 1 disable i/o check
-		
-		PORTB-b4 0 enable r/w memory parity check
-				 1 disable r/w parity check
-		
-		PORTB-b3 0 turn off LED
-				 1 turn on LED (old cassettee motor off)
-		
-		PORTB-b2 0 read spare key
-				 1 read r/w memory size (from Port C)
-		
-		PORTB-b1 0 turn off speaker
-				 1 enable speaker data
-		
-		PORTB-b0 0 turn off timer 2
-				 1 turn on timer 2, gate speaker with square wave */
-
+	/* Port B (device control register)  */
 	ibm_pc->timer2_gate  = (value & PORTB_TIMER2_GATE);
 
 	if (IS_RISING_EDGE(PORTB_KB_ENABLE, ppi->port_b, value)) {
@@ -438,18 +428,27 @@ static void ppi_port_b_write(I8255_PPI* ppi, uint8_t value) {
 	}
 }
 static uint8_t ppi_port_c_read(I8255_PPI* ppi) {
-	/* PORT C (device output register, read spare key, system sw2) */
-	
-	if (ppi->port_b & PORTB_CASSETTE_MOTOR_OFF) {
-		// Loopback mode
+	/* PORT C (device output register */	
+	switch (ibm_pc->config.model) {
+		case MODEL_5150_16_64:
+		case MODEL_5150_64_256:
+			if (ppi->port_b & PORTB_READ_SW2_KEY) {
+				return (ibm_pc->config.sw2 & 0x0F);
+			}
+			else {
+				return ((ibm_pc->config.sw2 >> 4) & 0x01);
+			}
+			break;
+		case MODEL_5160:
+			if (ppi->port_b & PORTB_SW1_SELECT) {
+				return ((ibm_pc->config.sw1 >> 4) & 0x0F);
+			}
+			else {
+				return (ibm_pc->config.sw1 & 0x0F);
+			}
+			break;
 	}
-
-	if (ppi->port_b & PORTB_READ_SW2_KEY) {
-		return (ibm_pc->config.sw2 & 0x0F);
-	}
-	else {
-		return ((ibm_pc->config.sw2 >> 4) & 0x01);
-	}
+	return 0; /* not handled */
 }
 
 static void pcspeaker_set(PC_SPEAKER* pc_speaker, uint8_t input) {

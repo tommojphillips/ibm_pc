@@ -19,6 +19,7 @@
 static const TOMI_ENUM model_def[] = {
 	{ "5150_16_64",  MODEL_5150_16_64 },
 	{ "5150_64_256", MODEL_5150_64_256 },
+	{ "5160",        MODEL_5160 },
 };
 
 static const TOMI_ENUM video_adapter_def[] = {
@@ -381,6 +382,9 @@ int args_parse_cli(int argc, char** argv, ARGS* args) {
 			}
 			else if (strncmp("5150_64_256", arg, 12) == 0) {
 				args->pc_config->model = MODEL_5150_64_256;
+			}
+			else if (strncmp("5160", arg, 5) == 0) {
+				args->pc_config->model = MODEL_5160;
 			}
 			else {
 				printf("Invalid model: %s\n", arg);

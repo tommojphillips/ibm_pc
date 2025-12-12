@@ -85,6 +85,7 @@
 
 #define MODEL_5150_16_64  0 /* 5150 16-64 KB Motherboard */
 #define MODEL_5150_64_256 1 /* 5150 64-256 KB Motherboard */
+#define MODEL_5160        2 /* 5160 Motherboard */
 
 #define ISA_BUS_SLOTS 5 /* number of Card Slots on ISA BUS */
 
