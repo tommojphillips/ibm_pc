@@ -487,8 +487,6 @@ static void draw_dipswitch_submenu(void) {
 		}
 
 		if (ui_begin_menu("Floppy drives")) {
-			int sel = 0;
-
 			if (ibm_pc->config.model == MODEL_5150_16_64 || ibm_pc->config.model == MODEL_5150_64_256) {
 				sel = (ibm_pc->config.sw1 & SW1_HAS_FDC) == 0;
 				if (ui_menu_button("0##floppy_drives", sel, !sel)) {
@@ -526,7 +524,7 @@ static void draw_dipswitch_submenu(void) {
 		if (ui_begin_menu("Planar RAM")) {
 			for (uint20_t k = total_ram_min; k <= planar_ram_max; k += ram_inc_below_planar_max) {
 				sprintf(&str[0], "%u KB##planar_ram", k);
-				int sel = k * 1024 == determine_planar_ram_size(ibm_pc->config.sw1);
+				sel = k * 1024 == determine_planar_ram_size(ibm_pc->config.sw1);
 				if (ui_menu_button(str, sel, !sel)) {
 					ibm_pc->config.sw1 &= ~SW1_MEMORY_MASK;
 					ibm_pc->config.sw1 |= determine_planar_ram_sw(k * 1024);
