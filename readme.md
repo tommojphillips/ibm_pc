@@ -212,6 +212,8 @@ Means:
 The emulator supports configuration files written in a custom structured INI-like format called **TOMI** (Tom’s Object Markup INI).  
 It extends traditional INI syntax with support for **inline structures** and **nested data**, making it easy to define complex machine setups.
 
+See: [Example INI](https://github.com/tommojphillips/ibm_pc/blob/master/config/ibm_pc.ini)
+
 ### Format:
 
 #### Basic Key-Value Pairs
@@ -321,64 +323,6 @@ Structs can also be written in a single line:
  - Missing values fall back to defaults defined in the emulator.
  - If a `sw1_override` or `sw2_override` is `false`; the associated SW is set automatically based on the provided config
  - RAM must be provided in BYTES.
-
-### Example INI:
-
-```ini
-; ----------------- PC Config ------------------
-model = '5150_64_256'         ; 5150_16_64, 5150_64_256, 5160
-video_adapter = 'CGA'         ; MDA, CGA, CGA40, CGA80
-conventional_ram = 0x40000    ; 0x4000 - 0xB8000 (16K - 736K)
-num_floppies = 2              ; 0, 1, 2
-; ----------------------------------------------
-
-; --------------- DIP SWITCHES -----------------
-sw1_override = false
-sw2_override = false
-sw1 = 0b00000000
-sw2 = 0b00000000
-; ----------------------------------------------
-
-; --------------- Floppy Disk Drives ----------------
-disk = [ drive = 'A', path = 'floppies/msdos4_startup.img'  ]
-disk = [ drive = 'B', path = 'floppies/msdos4_working6.img' ]
-; ----------------------------------------------
-
-; --------------- Hard Disk Drives ----------------
-hdd = [ drive = 'C', path = 'hdds/hdd.vhd'  ]
-hdd = [ drive = 'D', path = 'hdds/raw_hdd.raw', type = 'Type13'  ]
-; ----------------------------------------------
-
-; -------------------- ROMS --------------------
-rom = [ address = 0xF6000, path = 'roms/5150cb10_1.bin' ]
-rom = [ address = 0xF8000, path = 'roms/5150cb10_2.bin' ]
-rom = [ address = 0xFA000, path = 'roms/5150cb10_3.bin' ]
-rom = [ address = 0xFC000, path = 'roms/5150cb10_4.bin' ]
-rom = [ address = 0xFE000, path = 'roms/BIOS_IBM5150_27OCT82.BIN' ]
-rom = [ address = 0xCC000, path = 'roms/expansion_rom.bin' ]
-; ----------------------------------------------
-
-; --------------- Display Config ---------------
-texture_scale_mode = 'Nearest' ; Nearest, Linear
-display_scale_mode = 'Fit'     ; Fit, Stretched
-display_view_mode = 'Cropped'  ; Cropped, Full
-correct_aspect_ratio = true
-emulate_max_scanline = true
-allow_display_disable = true
-delay_display_disable = true
-delay_display_disable_time = 200
-; ----------------------------------------------
-
-; --------------- Display Fonts ----------------
-mda_font = 'fonts/Bm437_IBM_MDA.FON'
-cga_font = 'fonts/Bm437_IBM_CGA.FON'
-; ----------------------------------------------
-
-; ------------------- DEBUG --------------------
-dbg_ui = false
-; ----------------------------------------------
-
-```
 
 ### XEBEC
 
