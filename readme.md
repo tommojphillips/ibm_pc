@@ -67,7 +67,7 @@ The project is built in Visual Studio 2022 or 2026
  Make sure these files are next to `ibm_pc.exe` or on your PATH:
  - SDL3.dll
  - SDL3_ttf.dll
- - UI.dll
+ - UI.dll (built via `UI.sln`)
 
  If building from source, and launching through visual studio, all .dll files are already on your PATH. 
  You only need to copy the .FON files to the same directory as ibm_pc.exe
@@ -208,12 +208,10 @@ Means:
 
 ### Configuration File:
 
-The emulator supports configuration files written in a custom structured INI-like format called **TOMI** (Tom’s Object Markup INI).  
-It extends traditional INI syntax with support for **inline structures** and **nested data**, making it easy to define complex machine setups.
+The emulator supports configuration files written in a custom structured INI-like format called **TOMI**
 
-See: [Format Spec](https://github.com/tommojphillips/ibm_pc/blob/master/config_file_format.md)
-
-See: [Example Config File](https://github.com/tommojphillips/ibm_pc/blob/master/config/ibm_pc.ini)
+- [Format Spec](https://github.com/tommojphillips/ibm_pc/blob/master/config_file_format.md)
+- [Example Config File](https://github.com/tommojphillips/ibm_pc/blob/master/config/ibm_pc.ini)
 
 ### Settings:
 | Key                     | Type   | Description                                        | Values                         |
