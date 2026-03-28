@@ -14,8 +14,9 @@ An IBM PC Emulator written in C using SDL3
    - [Configuration file](#configuration-file)
      - [Definitions](#settings)
  - [XEBEC Hard disk drive](#xebec)
+ - [Sources](#sources)
  - [Screenshots](#screenshots)
-
+   
 ## Emulated Hardware
  - i8086 CPU
  - i8237 DMA
@@ -322,8 +323,10 @@ If using a RAW image, Some hard disk geometries cant be determined from the file
 #### FDFLUSH.COM
 This program invalidates the FAT and forces all floppies and hdds to be re-cached next time they are accessed. This allows changes made by the host OS to show up without a reboot of the emulator. This program can be found in the `programs\` directory of the repo.
 
-#### Screenshots
+### Sources
+[Sources.md](https://github.com/tommojphillips/ibm_pc/blob/master/sources.md)
 
+### Screenshots
 ![alt text](https://github.com/tommojphillips/ibm_pc/blob/master/images/dbg_view1.png) 
 ![alt text](https://github.com/tommojphillips/ibm_pc/blob/master/images/dbg_view2.png) 
 ![alt text](https://github.com/tommojphillips/ibm_pc/blob/master/images/hdd_view.png) 
