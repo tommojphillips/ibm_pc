@@ -13,7 +13,6 @@ An IBM PC Emulator written in C using SDL3
      - [Definitions](#command-line)
    - [Configuration file](#configuration-file)
      - [Definitions](#settings)
-     - [Format](#format)
  - [XEBEC Hard disk drive](#xebec)
  - [Screenshots](#screenshots)
 
@@ -212,49 +211,10 @@ Means:
 The emulator supports configuration files written in a custom structured INI-like format called **TOMI** (Tom’s Object Markup INI).  
 It extends traditional INI syntax with support for **inline structures** and **nested data**, making it easy to define complex machine setups.
 
-See: [Example INI](https://github.com/tommojphillips/ibm_pc/blob/master/config/ibm_pc.ini)
+See: [Format Spec](https://github.com/tommojphillips/ibm_pc/blob/master/config_file_format.md)
 
-### Format:
+See: [Example Config File](https://github.com/tommojphillips/ibm_pc/blob/master/config/ibm_pc.ini)
 
-#### Basic Key-Value Pairs
-
-Each setting is defined as a **key-value pair**.  
-The assignment character `=` associates a key with a value. Whitespace is optional.
-
-```ini
-  key1=value
-  key2 = value
-  key3 = 'value'
-  key4 = "value"
-  ...
-```
-
-Multiple pairs can also appear on the same line, separated by commas:
-
-```ini
-  key1=value, key2 = value, key3 = 'value', key4 = "value", ...
-```
-
-#### Structs
-
-A struct is a collection of **key-value pairs** grouped together using square brackets `[` `]`.
-This allows related settings to be logically grouped.
-
-```ini
-  struct = [
-    key1=value,
-    key2 = value,
-    key3 = 'value',
-    key4 = "value",
-    ...
-  ]
-```
-
-Structs can also be written in a single line:
-
-```ini
-  struct = [ key1=value, key2 = value, key3 = 'value', key4 = "value", ... ]
-```
 ### Settings:
 | Key                     | Type   | Description                                        | Values                         |
 |-------------------------|--------|----------------------------------------------------|--------------------------------|
