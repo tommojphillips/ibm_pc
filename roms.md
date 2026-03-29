@@ -70,3 +70,5 @@ ROMS can be found on 86Box's github: https://github.com/86Box/roms/
  | Description    | Size  | Address     | Location                                                                       |
  |----------------|-------|-------------|------------------------------------------------------------------------------- |
  | Xebec          | 4K    | **0xC8000** | `hdd\st506\ibm_xebec_62x0822_1985.bin`                                         |
+ 
+- [ROMS](https://github.com/tommojphillips/ibm_pc/blob/master/readme.md#rom-files)
